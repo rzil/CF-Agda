@@ -57,6 +57,10 @@ record NG : Set where
  
  ingress : ℕ → NG
  ingress t = record {a = a1; a1 = a + t * a1; b = b1; b1 = b + t * b1}
+
+ -- equivalent to ingress with an argument of ∞ (in some sense)
+ ∞-ingress : NG
+ ∞-ingress = record {a = a1; a1 = a1; b = b1; b1 = b1}
  
  egress : (t : ℕ) → {tb≤a : t * b ≤ a} → {tb1≤a1 : t * b1 ≤ a1} → NG
  egress t = record {a = b; b = a ∸ t * b; a1 = b1; b1 = a1 ∸ t * b1}
@@ -67,9 +71,6 @@ record NG : Set where
      (a1 div b1) * b1       ≤⟨ quot*divid≤divis a1 b1 ⟩
      a1                     ∎
    where open ≤-Reasoning
- 
- ∞-ingress : NG
- ∞-ingress = record {a = a1; a1 = a1; b = b1; b1 = b1}
 
 -- type for continued fractions
 CF : Set
@@ -115,17 +116,19 @@ cycle xs = cycle' xs xs
   cycle' xs (y L∷ ys) = y ∷ ♯ (cycle' xs ys)
 
 -- rational to continued fraction
-r2cf : ℕ → ℕ → CF
+r2cf : (numerator : ℕ) → (denominator : ℕ) → CF
 r2cf _ 0 = []
 r2cf n (ℕ.suc d-1) = DivMod.quotient x ∷ ♯ (r2cf d (toℕ (DivMod.remainder x)))
  where
   d = ℕ.suc d-1
   x = n divMod d
 
+-- square root of 2 as a continued fraction
 sqrt2 : CF
 sqrt2 = 1 ∷ (♯ (repeat 2))
 
-test₀ = ng-apply (ng 2 1 0 2) (r2cf 13 11)
-test₁ = ng-apply (ng 2 1 0 2) (r2cf 22 7)
-test₂ = ng-apply (ng 1 0 0 4) (r2cf 22 7)
-test₃ = ng-apply (ng 1 0 0 4) sqrt2
+-- some tests
+test₀ = take 10 $ ng-apply (ng 2 1 0 2) (r2cf 13 11)
+test₁ = take 10 $ ng-apply (ng 2 1 0 2) (r2cf 22 7)
+test₂ = take 10 $ ng-apply (ng 1 0 0 4) (r2cf 22 7)
+test₃ = take 10 $ ng-apply (ng 1 0 0 4) sqrt2

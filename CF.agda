@@ -80,7 +80,7 @@ ng-apply : NG → CF → Colist (Maybe ℕ)
 
 -- No terms left in the input. Inject ∞ into input.
 ng-apply op [] with NG.b op ≟ 0 | NG.b1 op ≟ 0
-... | yes _ | yes _ = []   -- We are done here. No more terms to output
+... | yes _ | yes _ = []   -- We are done here since b == b1
 ... | yes _ | _ = nothing ∷ ♯ (ng-apply (NG.∞-ingress op) [])
 ... | _ | yes _ = nothing ∷ ♯ (ng-apply (NG.∞-ingress op) [])   -- nb: repetition of code here. not nice.
 ... | no b≢0 | no b1≢0 with NG.output? op {fromWitnessFalse b≢0} {fromWitnessFalse b1≢0}
@@ -90,6 +90,7 @@ ng-apply op [] with NG.b op ≟ 0 | NG.b1 op ≟ 0
 
 -- Eat up an input term
 ng-apply op (x ∷ xs) with NG.b op ≟ 0 | NG.b1 op ≟ 0
+... | yes _ | yes _ = []   -- We are done here since b == b1
 ... | yes _ | _ = nothing ∷ ♯ (ng-apply (NG.ingress op x) (♭ xs))
 ... | _ | yes _ = nothing ∷ ♯ (ng-apply (NG.ingress op x) (♭ xs))   -- nb: repetition of code here. not nice.
 ... | no b≢0 | no b1≢0 with NG.output? op {fromWitnessFalse b≢0} {fromWitnessFalse b1≢0}

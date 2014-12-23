@@ -2,7 +2,7 @@ module CF where
 
 -- http://rosettacode.org/wiki/Continued_fraction/Arithmetic/G(matrix_NG,_Contined_Fraction_N)#NG
 
-open import Data.Nat
+open import Data.Nat as Nat
 open import Data.Nat.Properties
 open import Data.Nat.Properties.Simple
 open import Data.Nat.DivMod
@@ -38,6 +38,10 @@ private
         dm = _divMod_ m n
         open ≤-Reasoning
 
+-- represents the homographic transform
+--          a1*z + a
+-- f(z) --> --------
+--          b1*z + b
 record NG : Set where
  constructor ng
  field
@@ -72,31 +76,30 @@ record NG : Set where
      a1                     ∎
    where open ≤-Reasoning
 
--- type for continued fractions
 CF : Set
 CF = Colist ℕ
 
 ng-apply : NG → CF → Colist (Maybe ℕ)
 
+ng-apply (ng _ _ 0 0) _ = []  -- We are done here since b == b1 == 0
+
 -- No terms left in the input. Inject ∞ into input.
-ng-apply op [] with NG.b op ≟ 0 | NG.b1 op ≟ 0
-... | yes _ | yes _ = []   -- We are done here since b == b1
-... | yes _ | _ = nothing ∷ ♯ (ng-apply (NG.∞-ingress op) [])
-... | _ | yes _ = nothing ∷ ♯ (ng-apply (NG.∞-ingress op) [])   -- nb: repetition of code here. not nice.
-... | no b≢0 | no b1≢0 with NG.output? op {fromWitnessFalse b≢0} {fromWitnessFalse b1≢0}
-...    | yes prf = just t ∷ ♯ ng-apply (NG.∞-ingress (NG.egress op t {quot*divid≤divis (NG.a op) (NG.b op)} {NG.lemma op prf})) []
-                   where t = NG.term op {fromWitnessFalse b≢0}
-...    | no _ = nothing ∷ ♯ (ng-apply (NG.∞-ingress op) [])   -- nb: repetition of code here. not nice.
+ng-apply (ng a1 a 0 b) [] = nothing ∷ ♯ (ng-apply (NG.∞-ingress (ng a1 a 0 b)) [])
+ng-apply (ng a1 a b1 0) [] = nothing ∷ ♯ (ng-apply (NG.∞-ingress (ng a1 a b1 0)) [])
+ng-apply (ng a1 a (suc b1-1) (suc b-1)) [] with NG.output? (ng a1 a (suc b1-1) (suc b-1)) {tt} {tt}
+... | yes prf = just t ∷ ♯ ng-apply (NG.∞-ingress (NG.egress op t {quot*divid≤divis a (suc b-1)} {NG.lemma op prf})) []
+                where op = ng a1 a (suc b1-1) (suc b-1)
+                      t = NG.term op {tt}
+... | no _ = nothing ∷ ♯ (ng-apply (NG.∞-ingress (ng a1 a (suc b1-1) (suc b-1))) [])   -- nb: repetition of code here. not nice.
 
 -- Eat up an input term
-ng-apply op (x ∷ xs) with NG.b op ≟ 0 | NG.b1 op ≟ 0
-... | yes _ | yes _ = []   -- We are done here since b == b1
-... | yes _ | _ = nothing ∷ ♯ (ng-apply (NG.ingress op x) (♭ xs))
-... | _ | yes _ = nothing ∷ ♯ (ng-apply (NG.ingress op x) (♭ xs))   -- nb: repetition of code here. not nice.
-... | no b≢0 | no b1≢0 with NG.output? op {fromWitnessFalse b≢0} {fromWitnessFalse b1≢0}
-...    | yes prf = just t ∷ ♯ ng-apply (NG.ingress (NG.egress op t {quot*divid≤divis (NG.a op) (NG.b op)} {NG.lemma op prf}) x) (♭ xs)
-                   where t = NG.term op {fromWitnessFalse b≢0}
-...    | no _ = nothing ∷ ♯ (ng-apply (NG.ingress op x) (♭ xs))   -- nb: repetition of code here. not nice.
+ng-apply (ng a1 a 0 b) (x ∷ xs) = nothing ∷ ♯ (ng-apply (NG.ingress (ng a1 a 0 b) x) (♭ xs))
+ng-apply (ng a1 a b1 0) (x ∷ xs) = nothing ∷ ♯ (ng-apply (NG.ingress (ng a1 a b1 0) x) (♭ xs))
+ng-apply (ng a1 a (suc b1-1) (suc b-1)) (x ∷ xs) with NG.output? (ng a1 a (suc b1-1) (suc b-1)) {tt} {tt}
+... | yes prf = just t ∷ ♯ ng-apply (NG.ingress (NG.egress op t {quot*divid≤divis (NG.a op) (NG.b op)} {NG.lemma op prf}) x) (♭ xs)
+                where op = ng a1 a (suc b1-1) (suc b-1)
+                      t = NG.term op {tt}
+... | no _ = nothing ∷ ♯ (ng-apply (NG.ingress (ng a1 a (suc b1-1) (suc b-1)) x) (♭ xs))   -- nb: repetition of code here. not nice.
 
 -- convert the output of ng-apply to an equivalent continued fraction
 ng-output-to-CF : Colist (Maybe ℕ) → CF
@@ -128,8 +131,21 @@ r2cf n (ℕ.suc d-1) = DivMod.quotient x ∷ ♯ (r2cf d (toℕ (DivMod.remainde
 sqrt2 : CF
 sqrt2 = 1 ∷ (♯ (repeat 2))
 
+-- constant e from natural logarithm
+e-constant : CF
+e-constant = 2 ∷ ♯ (1 ∷ ♯ (e-pattern 2))
+ where
+  e-pattern : ℕ → CF
+  e-pattern x = x ∷ ♯ (1 ∷ ♯ (1 ∷ ♯ (e-pattern (2 + x))))
+
 -- some tests
 test₀ = take 10 $ ng-apply (ng 2 1 0 2) (r2cf 13 11)
 test₁ = take 10 $ ng-apply (ng 2 1 0 2) (r2cf 22 7)
 test₂ = take 10 $ ng-apply (ng 1 0 0 4) (r2cf 22 7)
 test₃ = take 10 $ ng-apply (ng 1 0 0 4) sqrt2
+test₄ = take 12 $ ng-apply (ng 1 0 1 2) (less-1 e-constant)   -- (e-1)/(e+1)
+ where less-1 : CF → CF
+       less-1 [] = []
+       less-1 (x ∷ xs) = (Nat.pred x) ∷ xs
+
+test-nothing = take 10 $ ng-apply (ng 1 0 0 4) (repeat 0)   -- this just gives a string of "nothing"

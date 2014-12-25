@@ -67,8 +67,11 @@ r2cf n d = q : (r2cf d r)
 det :: NG -> Int
 det (NG a1 a b1 b) = (fromIntegral (a1*b)) - (fromIntegral (a*b1))
 
---lau :: NG -> [Natural] -> [NG]
-lau m xs = (map (foldl ingress m) (inits xs))
+lau :: NG -> [Natural] -> [NG]
+lau m xs =  (map (foldl ingress m) (inits xs))
+
+phi :: Double
+phi = 0.5*(1 + sqrt 5)
 
 test0 = ng_apply (NG 1 0 0 4) sqrt2
 test1 = ng_apply (NG 2 1 0 2) (r2cf 13 11)

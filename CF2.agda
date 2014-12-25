@@ -158,38 +158,40 @@ r2cf n (ℕ.suc d-1) = DivMod.quotient x ∷ ♯ (r2cf d (toℕ (DivMod.remainde
   d = ℕ.suc d-1
   x = n divMod d
 
--- can be a helpful lemma
-map-suc-pred-lemma : (list : Colist ℕ) → Colist.All (Nat._<_ 0) (Colist.map (Nat.suc ∘ Nat.pred) list)
-map-suc-pred-lemma [] = []
-map-suc-pred-lemma (x ∷ xs) = s≤s z≤n ∷ ♯ (map-suc-pred-lemma (♭ xs))
-
 -- square root of 2 as a continued fraction
 sqrt2 : Colist ℕ
 sqrt2 = 1 ∷ (♯ (repeat 2))
 
+-- golden ratio
+φ : Colist ℕ
+φ = repeat 1
+
 private
+ repeat-condition : (n : ℕ) → {c : True (1 Nat.≤? n)} → Colist.All (Nat._<_ 0) (repeat n)
+ repeat-condition 0 {()}
+ repeat-condition (suc n-1) = s≤s z≤n ∷ ♯ (repeat-condition (suc n-1))
+
  e-pattern : ℕ → Colist ℕ
  e-pattern x = x ∷ ♯ (1 ∷ ♯ (1 ∷ ♯ (e-pattern (2 + x))))
  
- e-pattern-condition : (n : ℕ) → {cond : 0 Nat.< n} → Colist.All (Nat._<_ 0) (e-pattern n)
+ e-pattern-condition : (n : ℕ) → {cond : True (1 Nat.≤? n)} → Colist.All (Nat._<_ 0) (e-pattern n)
  e-pattern-condition 0 {()}
- e-pattern-condition (suc n-1) = (s≤s z≤n) ∷ ♯ ((s≤s z≤n) ∷ ♯ ((s≤s z≤n) ∷ ♯ (e-pattern-condition (3 + n-1) {s≤s z≤n})))
+ e-pattern-condition (suc n-1) = (s≤s z≤n) ∷ ♯ ((s≤s z≤n) ∷ ♯ ((s≤s z≤n) ∷ ♯ (e-pattern-condition (3 + n-1))))
 
 -- constant e from natural logarithm
 e-constant : Colist ℕ
 e-constant = 2 ∷ ♯ (1 ∷ ♯ (e-pattern 2))
 
 e-condition : Colist.All (Nat._<_ 0) e-constant
-e-condition = (s≤s z≤n) ∷ ♯ ((s≤s z≤n) ∷ ♯ (e-pattern-condition 2 {s≤s z≤n}))
+e-condition = (s≤s z≤n) ∷ ♯ ((s≤s z≤n) ∷ ♯ (e-pattern-condition 2))
 
 -- some tests
 test₀ = take 10 $ ng-apply (ng 2 1 0 2) (r2cf 13 11) {s≤s z≤n ∷ ♯ (s≤s z≤n ∷ ♯ (s≤s z≤n ∷ ♯ []))}
 test₁ = take 10 $ ng-apply (ng 2 1 0 2) (r2cf 22 7) {s≤s z≤n ∷ ♯ (s≤s z≤n ∷ ♯ [])}
 test₂ = take 10 $ ng-apply (ng 1 0 0 4) (r2cf 22 7) {s≤s z≤n ∷ ♯ (s≤s z≤n ∷ ♯ [])}
-test₃ = take 10 $ ng-apply (ng 1 0 0 4) sqrt2 {s≤s z≤n ∷ ♯ prf}
-  where prf : Colist.All (Nat._<_ 0) (repeat 2)
-        prf = s≤s z≤n ∷ ♯ prf
-test₄ = take 20 $ ng-apply (ng 1 0 1 2) (less-1 e-constant) {(s≤s z≤n) ∷ ♯ ((s≤s z≤n) ∷ ♯ (e-pattern-condition 2 {s≤s z≤n}))}   -- (e-1)/(e+1)
+test₃ = take 10 $ ng-apply (ng 1 0 0 4) sqrt2 {s≤s z≤n ∷ ♯ (repeat-condition 2)}
+test₄ = take 20 $ ng-apply (ng 1 0 1 2) (less-1 e-constant) {(s≤s z≤n) ∷ ♯ ((s≤s z≤n) ∷ ♯ (e-pattern-condition 2))}   -- (e-1)/(e+1)
  where less-1 : Colist ℕ → Colist ℕ
        less-1 [] = []
        less-1 (x ∷ xs) = (Nat.pred x) ∷ xs
+test₅ = take 40 $ ng-apply (ng 101 1 1 1) φ {repeat-condition 1}

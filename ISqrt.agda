@@ -13,6 +13,8 @@ open import Relation.Nullary.Decidable
 open import Relation.Binary.PropositionalEquality
 open import Data.Product
 open import Function
+open import Data.Fin renaming (_≤_ to _F≤_; _+_ to _F+_; _<_ to _F<_; zero to fzero; suc to fsuc)
+open import Data.Fin.Properties hiding (_≟_)
 open import Data.Unit hiding (_≤_; _≤?_; _≟_)
 --open import Induction.WellFounded
 --open import Induction.Nat
@@ -40,14 +42,149 @@ step _ 0 {()}
 step n (suc x-1) {1≤x} = (x + (n div x)) div 2
  where x = suc x-1
 
-bung : ∀ {n m} {m≢0 : False (m ≟ 0)} → _div_ n m {m≢0} ≡ 0 → n < m
-bung = {!!}
+private
+ 0<n→n≢0 : ∀ {n} → 0 < n → n ≢ 0
+ 0<n→n≢0 {zero} ()
+ 0<n→n≢0 {suc n} _ ()
 
-step≢0 : ∀ n x {n≢0 : False (n ≟ 0)} {x≢0 : False (x ≟ 0)} → ¬ step n x {x≢0} ≡ 0
-step≢0 n x fnx≡0 = {!!}
+ n≤0→n≡0 : ∀ {n} → n ≤ 0 → n ≡ 0
+ n≤0→n≡0 {0} _ = refl
+ n≤0→n≡0 {suc _} ()
+
+ n≤n : ∀ n → n ≤ n
+ n≤n zero = z≤n
+ n≤n (suc n-1) = s≤s (n≤n n-1)
+
+ k+[1+z]≡1+[k+z] : ∀ k z → k + (1 + z) ≡ 1 + (k + z)
+ k+[1+z]≡1+[k+z] k z = begin
+   k + (1 + z)   ≡⟨ sym (+-assoc k 1 z) ⟩
+   (k + 1) + z   ≡⟨ cong (flip _+_ z) (+-comm k 1) ⟩
+   (1 + k) + z   ≡⟨ +-assoc 1 k z ⟩
+   1 + (k + z)   ∎
+  where open ≡-Reasoning
+
+cancel-*-right-< : ∀ i j k → i * suc k < j * suc k → i < j
+cancel-*-right-< zero    zero       _ ()
+cancel-*-right-< zero    (suc j-1)  _ _  = s≤s z≤n
+cancel-*-right-< (suc i) zero    _ ()
+cancel-*-right-< (suc i) (suc j) k le = s≤s (cancel-*-right-< i j k (cancel-+-left-≤ k lem))
+ where open ≤-Reasoning
+       lem : k + (suc (i * suc k)) ≤ k + j * suc k
+       lem = begin k + (suc (i * suc k)) ≡⟨ k+[1+z]≡1+[k+z] k (i * suc k) ⟩ suc (k + i * suc k) ≤⟨ ≤-pred le ⟩  k + j * suc k ∎
+
+div-right : ∀ n m k {k≢0 : False (k ≟ 0)} → n < m * k → _div_ n k {k≢0} < m
+div-right _ _ 0 {()}
+div-right n m (suc k-1) {k≢0} n<m*k = cancel-*-right-< (_div_ n k {k≢0}) m k-1 lem
+ where open ≤-Reasoning
+       n/k = n divMod (suc k-1)
+       k = suc k-1
+       lem : (_div_ n k {k≢0}) * k < m * k
+       lem = begin
+          suc ((_div_ n k {k≢0}) * k)                                    ≤⟨ s≤s (≤-steps (toℕ (DivMod.remainder n/k)) (n≤n ((DivMod.quotient n/k) * k))) ⟩
+          suc (toℕ (DivMod.remainder n/k) + (DivMod.quotient n/k) * k)   ≡⟨ cong suc (sym (DivMod.property n/k)) ⟩
+          suc n                                                          ≤⟨ n<m*k ⟩
+          m * k   ∎
+
+div-left : ∀ n m k {k≢0 : False (k ≟ 0)} → n < k * m → _div_ n k {k≢0} < m
+div-left n m k {k≢0} n<k*m = div-right n m k {k≢0} (begin n <⟨ n<k*m ⟩ k * m ≡⟨ *-comm k m ⟩ m * k ∎)
+ where open ≤-Reasoning
+
+a<b→n+a<n+b : ∀ n {a b} → a < b → n + a < n + b
+a<b→n+a<n+b zero a<b = a<b
+a<b→n+a<n+b (suc n) a<b = s≤s (a<b→n+a<n+b n a<b)
 
 thm : ∀ n x {x≢0 : False (x ≟ 0)} {n<x*x : n < x * x} → step n x {x≢0} <′ x
-thm = {!!}
+thm n 0 {()}
+thm n (suc x-1) {_} {n<x*x} = ≤⇒≤′ (div-left (x + (n div x)) x 2 lem)
+ where open ≤-Reasoning
+       x = suc x-1
+       lem : x + (n div x) < 2 * x
+       lem = begin
+         x + (n div x)         <⟨ a<b→n+a<n+b x (div-right n x x n<x*x) ⟩
+         x + x                 ≡⟨ sym (+-right-identity _) ⟩
+         (x + x) + 0           ≡⟨ +-assoc x x 0 ⟩
+         2 * x                 ∎
+
+n%1≡0 : ∀ n → toℕ (n mod 1) ≡ 0
+n%1≡0 n = n≤0→n≡0 (≤-pred (bounded (n mod 1)))
+
+*-right-identity : ∀ n → n * 1 ≡ n
+*-right-identity n = begin n * 1 ≡⟨ *-comm n 1 ⟩ 1 * n ≡⟨ +-right-identity n ⟩ n ∎
+ where open ≡-Reasoning
+
+*-left-identity : ∀ n → 1 * n ≡ n
+*-left-identity = +-right-identity
+
+n/1≡n : ∀ {n} → n div 1 ≡ n
+n/1≡n {n} = begin
+   n div 1                         ≡⟨ sym (*-left-identity _) ⟩
+   1 * (n div 1)                   ≡⟨ *-comm 1 (n div 1) ⟩
+   (n div 1) * 1                   ≡⟨ sym refl ⟩
+   0 + ((n div 1) * 1)             ≡⟨ cong (flip _+_ _) (sym (n%1≡0 n)) ⟩
+   toℕ (n mod 1) + ((n div 1) * 1) ≡⟨ sym (DivMod.property dm) ⟩
+   n ∎
+ where dm = n divMod 1
+       open ≡-Reasoning
+
+toℕ-inject₁ : ∀ {n} i → toℕ {n} i ≡ toℕ (inject₁ i)
+toℕ-inject₁ fzero = refl
+toℕ-inject₁ (fsuc i) = cong suc (toℕ-inject₁ i)
+
+zing : ∀ n k i → (suc n) mod (suc k) ≡ fsuc i → n mod (suc k) ≡ (inject₁ i)
+zing = {!!}
+
+div-monotonic : ∀ n k {k≢0 : False (k ≟ 0)} → _div_ n k {k≢0} ≤ _div_ (suc n) k {k≢0}
+div-monotonic _ 0 {()}
+div-monotonic n (suc k-1) {k≢0} with _mod_ (suc n) (suc k-1) {k≢0} | inspect (λ z → _mod_ z (suc k-1) {k≢0}) (suc n)
+... | fzero | [ eq ] = {!!}
+... | fsuc i | [ eq ] = begin n div k ≡⟨ sym lem₁ ⟩ (suc n) div k ∎
+ where k = suc k-1
+       n_dm = n divMod k
+       [1+n]_dm = (suc n) divMod k
+       [1+n]%k≡1+i : (suc n) mod k ≡ fsuc i
+       [1+n]%k≡1+i = eq
+       n%k≡i : n mod k ≡ (inject₁ i)
+       n%k≡i = zing n k-1 i [1+n]%k≡1+i
+       lem₀ : toℕ (fsuc i) + ((suc n) div k) * k ≡ toℕ (fsuc i) + (n div k) * k
+       lem₀ = begin
+         toℕ (fsuc i) + ((suc n) div k) * k            ≡⟨ cong (λ z → toℕ z + ((suc n) div k) * k) {fsuc i} {(suc n) mod k} (sym [1+n]%k≡1+i) ⟩
+         toℕ ((suc n) mod k) + ((suc n) div k) * k     ≡⟨ sym (DivMod.property [1+n]_dm) ⟩
+         suc n                                         ≡⟨ cong suc (DivMod.property n_dm) ⟩
+         suc (toℕ (n mod k) + (n div k) * k)           ≡⟨ sym (+-assoc 1 (toℕ (n mod k)) _) ⟩
+         (suc (toℕ (n mod k))) + (n div k) * k         ≡⟨ cong (flip _+_ ((n div k) * k)) {suc (toℕ (n mod k))} refl ⟩
+         (toℕ (fsuc (n mod k))) + (n div k) * k        ≡⟨ cong (λ z → toℕ (fsuc z) + (n div k) * k) n%k≡i ⟩
+         toℕ (fsuc (inject₁ i)) + (n div k) * k        ≡⟨ cong (λ z → (suc z) + (n div k) * k) (sym (toℕ-inject₁ i)) ⟩
+         toℕ (fsuc i) + (n div k) * k                  ∎
+        where open ≡-Reasoning
+       lem₁ : (suc n) div k ≡ n div k
+       lem₁ = cancel-*-right _ _ (cancel-+-left (toℕ (fsuc i)) lem₀)
+       open ≤-Reasoning
+
+div-blam : ∀ n m k {k≢0 : False (k ≟ 0)} → _div_ n k {k≢0} ≤ _div_ (m + n) k {k≢0}
+div-blam _ _ 0 {()}
+div-blam _ zero _ = n≤n _
+div-blam n (suc m-1) (suc k-1) = begin n div k ≤⟨ div-blam n m-1 k ⟩ (m-1 + n) div k ≤⟨ div-monotonic (m-1 + n) k ⟩ (suc (m-1 + n)) div k ≡⟨ cong (λ z → z div k) (sym (+-assoc 1 m-1 n)) ⟩ (m + n) div k ∎
+ where open ≤-Reasoning
+       m = suc m-1
+       k = suc k-1
+
+≤-div : ∀ n m k {k≢0 : False (k ≟ 0)} → n ≤ m → _div_ n k {k≢0} ≤ _div_ m k {k≢0}
+≤-div n m k {k≢0} n≤m = {!!}
+
+step≢0 : ∀ n x {n≢0 : False (n ≟ 0)} {x≢0 : False (x ≟ 0)} → ¬ step n x {x≢0} ≡ 0
+step≢0 0 _ {()}
+step≢0 _ 0 {_} {()}
+step≢0 1 1 ()
+step≢0 (suc (suc n-2)) 1 = 0<n→n≢0 lem₂
+ where n = 2 + n-2
+       lem₀ : (step n 1) ≡ ((suc n) div 2)
+       lem₀ = cong (λ z → (1 + z) div 2) {n div 1} {n} n/1≡n
+       lem₁ : 0 < (suc n) div 2
+       lem₁ = ≤-div 2 (suc n) 2 (s≤s (s≤s z≤n))
+       open ≤-Reasoning
+       lem₂ : 0 < step n 1
+       lem₂ = begin 0 <⟨ lem₁ ⟩ (suc n) div 2 ≡⟨ sym lem₀ ⟩ step n 1 ∎
+step≢0 (suc n-1) (suc (suc x-2)) fnx≡0 = {!!}
 
 data Terminates (n x : ℕ) : Set where
   termination-proof : (∀ y → (y <′ x) → Terminates n y) → Terminates n x
@@ -57,7 +194,10 @@ isqrtGo 0 _ _ = 0
 isqrtGo _ 0 {()}
 isqrtGo (suc n-1) (suc x-1) {_} (termination-proof term) with (2 + n-1) ≤? ((suc x-1) * (suc x-1))
 ... | no _ = suc x-1
-... | yes n<x*x = isqrtGo (suc n-1) (step (suc n-1) (suc x-1) {tt}) {fromWitnessFalse (step≢0 (suc n-1) (suc x-1))} (term (step (suc n-1) (suc x-1) {tt}) (thm (suc n-1) (suc x-1) {tt} {n<x*x}))
+... | yes n<x*x = isqrtGo n (step n x {tt}) {fromWitnessFalse (step≢0 n x)}
+                  (term (step n x {tt}) (thm n x {tt} {n<x*x}))
+ where n = suc n-1
+       x = suc x-1
 
 baseCase : ∀ {n} y → (y <′ zero) → Terminates n y
 baseCase _ ()

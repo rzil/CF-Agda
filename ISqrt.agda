@@ -131,12 +131,29 @@ toℕ-inject₁ fzero = refl
 toℕ-inject₁ (fsuc i) = cong suc (toℕ-inject₁ i)
 
 zing : ∀ n k i → (suc n) mod (suc k) ≡ fsuc i → n mod (suc k) ≡ (inject₁ i)
-zing = {!!}
+zing n k i [1+n]%[1+k]≡[1+i] = {!!}
+ where [1+n]_dm = (suc n) divMod (suc k)
 
 div-monotonic : ∀ n k {k≢0 : False (k ≟ 0)} → _div_ n k {k≢0} ≤ _div_ (suc n) k {k≢0}
 div-monotonic _ 0 {()}
 div-monotonic n (suc k-1) {k≢0} with _mod_ (suc n) (suc k-1) {k≢0} | inspect (λ z → _mod_ z (suc k-1) {k≢0}) (suc n)
-... | fzero | [ eq ] = {!!}
+... | fzero | [ eq ] = cancel-*-right-≤ _ _ k-1 lem₁
+ where k = suc k-1
+       [1+n]%k≡0 : (suc n) mod k ≡ fzero
+       [1+n]%k≡0 = eq
+       lem₀ : (suc (toℕ (n mod k))) + (n div k) * k ≡ ((suc n) div k) * k
+       lem₀ = begin
+          (suc (toℕ (n mod k))) + (n div k) * k       ≡⟨ sym (cong suc (DivMod.property (n divMod k))) ⟩
+          suc n                                       ≡⟨ DivMod.property ((suc n) divMod k) ⟩
+          toℕ ((suc n) mod k) + ((suc n) div k) * k   ≡⟨ cong (λ z → toℕ z + ((suc n) div k) * k)  [1+n]%k≡0  ⟩
+          ((suc n) div k) * k                         ∎
+        where open ≡-Reasoning
+       lem₁ : (n div k) * k ≤ ((suc n) div k) * k
+       lem₁ = begin
+         (n div k) * k                                 ≤⟨ ≤-steps (suc (toℕ (n mod k))) (n≤n _) ⟩
+         (suc (toℕ (n mod k))) + (n div k) * k         ≡⟨ lem₀ ⟩
+         ((suc n) div k) * k                           ∎
+        where open ≤-Reasoning
 ... | fsuc i | [ eq ] = begin n div k ≡⟨ sym lem₁ ⟩ (suc n) div k ∎
  where k = suc k-1
        n_dm = n divMod k
@@ -163,13 +180,33 @@ div-monotonic n (suc k-1) {k≢0} with _mod_ (suc n) (suc k-1) {k≢0} | inspect
 div-blam : ∀ n m k {k≢0 : False (k ≟ 0)} → _div_ n k {k≢0} ≤ _div_ (m + n) k {k≢0}
 div-blam _ _ 0 {()}
 div-blam _ zero _ = n≤n _
-div-blam n (suc m-1) (suc k-1) = begin n div k ≤⟨ div-blam n m-1 k ⟩ (m-1 + n) div k ≤⟨ div-monotonic (m-1 + n) k ⟩ (suc (m-1 + n)) div k ≡⟨ cong (λ z → z div k) (sym (+-assoc 1 m-1 n)) ⟩ (m + n) div k ∎
+div-blam n (suc m-1) (suc k-1) = begin
+   n div k                ≤⟨ div-blam n m-1 k ⟩
+   (m-1 + n) div k        ≤⟨ div-monotonic (m-1 + n) k ⟩
+   (suc (m-1 + n)) div k  ≡⟨ cong (λ z → z div k) (sym (+-assoc 1 m-1 n)) ⟩
+   (m + n) div k          ∎
  where open ≤-Reasoning
        m = suc m-1
        k = suc k-1
 
+m∸n+n≡m : ∀ n m → n ≤ m → (m ∸ n) + n ≡ m
+m∸n+n≡m zero m _ = +-right-identity m
+m∸n+n≡m (suc _) zero ()
+m∸n+n≡m (suc n-1) (suc m-1) n≤m = begin
+   (m ∸ n) + n                 ≡⟨ sym (+-assoc (m-1 ∸ n-1) 1 n-1) ⟩
+   ((m-1 ∸ n-1) + 1) + n-1     ≡⟨ cong (flip _+_ n-1) (+-comm (m-1 ∸ n-1) 1) ⟩
+   suc ((m-1 ∸ n-1) + n-1)     ≡⟨ cong suc (m∸n+n≡m n-1 m-1 (≤-pred n≤m)) ⟩
+   m                           ∎
+ where open ≡-Reasoning
+       n = suc n-1
+       m = suc m-1
+
 ≤-div : ∀ n m k {k≢0 : False (k ≟ 0)} → n ≤ m → _div_ n k {k≢0} ≤ _div_ m k {k≢0}
-≤-div n m k {k≢0} n≤m = {!!}
+≤-div n m k {k≢0} n≤m = begin
+   _div_ n k {k≢0}              ≤⟨ div-blam n (m ∸ n) k ⟩
+   _div_ (m ∸ n + n) k {k≢0}    ≡⟨ cong (λ z → _div_ z k {k≢0}) (m∸n+n≡m n m n≤m) ⟩
+   _div_ m k {k≢0}              ∎
+ where open ≤-Reasoning
 
 step≢0 : ∀ n x {n≢0 : False (n ≟ 0)} {x≢0 : False (x ≟ 0)} → ¬ step n x {x≢0} ≡ 0
 step≢0 0 _ {()}

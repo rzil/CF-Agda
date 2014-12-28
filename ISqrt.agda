@@ -17,8 +17,9 @@ open import Function
 open import Data.Fin as Fin renaming (_≤_ to _F≤_; _+_ to _F+_; _<_ to _F<_; zero to fzero; suc to fsuc)
 open import Data.Fin.Properties hiding (_≟_)
 open import Data.Unit hiding (_≤_; _≤?_; _≟_)
---open import Induction.WellFounded
---open import Induction.Nat
+
+open import Lemmas
+open import DivModUniqueness
 
 _IsIntegerSqrtOf_ : ℕ → ℕ → Set
 _IsIntegerSqrtOf_ n m = n * n ≤ m × m ≤ (suc n) * (suc n)
@@ -55,14 +56,6 @@ private
  n≤n : ∀ n → n ≤ n
  n≤n zero = z≤n
  n≤n (suc n-1) = s≤s (n≤n n-1)
-
- k+[1+z]≡1+[k+z] : ∀ k z → k + (1 + z) ≡ 1 + (k + z)
- k+[1+z]≡1+[k+z] k z = begin
-   k + (1 + z)   ≡⟨ sym (+-assoc k 1 z) ⟩
-   (k + 1) + z   ≡⟨ cong (flip _+_ z) (+-comm k 1) ⟩
-   (1 + k) + z   ≡⟨ +-assoc 1 k z ⟩
-   1 + (k + z)   ∎
-  where open ≡-Reasoning
 
 cancel-*-right-< : ∀ i j k → i * suc k < j * suc k → i < j
 cancel-*-right-< zero    zero       _ ()
@@ -130,12 +123,6 @@ n/1≡n {n} = begin
 toℕ-inject₁ : ∀ {n} i → toℕ {n} i ≡ toℕ (inject₁ i)
 toℕ-inject₁ fzero = refl
 toℕ-inject₁ (fsuc i) = cong suc (toℕ-inject₁ i)
-
-mod-class : ∀ n k → n mod (suc k) ≡ (n + (suc k)) mod (suc k)
-mod-class n k = {!DivMod.property ((n + (suc k)) divMod (suc k))!}
-
-div-class : ∀ n k → suc (n div (suc k)) ≡ (n + (suc k)) div (suc k)
-div-class n k = {!!}
 
 div-pred : ∀ n k → (suc n) mod (suc k) ≢ fzero → (suc n) div (suc k) ≡ n div (suc k)
 div-pred n k x with n div (suc k) | (suc n) div (suc k)

@@ -6,12 +6,15 @@ open import Data.Nat.Properties.Simple
 open import Data.Nat.DivMod
 open import Data.Nat.Divisibility
 open import Data.Fin hiding (_+_; _-_; _<_; _≤_; pred) renaming (zero to fzero; suc to fsuc)
-open import Data.Fin.Properties
+open import Data.Fin.Properties hiding (_≟_)
 open import Relation.Binary.PropositionalEquality
 open import Relation.Nullary
 open import Relation.Nullary.Negation
 open import Data.Empty
+open import Data.Product
+open import Data.Sum
 open import Function
+open import Relation.Nullary.Decidable
 
 a≤b→¬b<a : ∀ {a b} → a ≤ b → ¬ (b < a)
 a≤b→¬b<a z≤n ()
@@ -81,21 +84,70 @@ rearrange-+-eq (suc a) (suc b) (suc c) (suc d) eq = rearrange-+-eq a b c d (begi
 rearrange-+-eq (suc a) zero (suc c) d eq = rearrange-+-eq a 0 c d (cong pred eq)
 rearrange-+-eq (suc a) (suc b) (suc c) zero eq = rearrange-+-eq a (suc b) c 0 (cong pred eq)
 
-zan : ∀ a b k → difference (k * a) (k * b) ≡ k * (difference a b)
-zan a b zero = refl
-zan a zero (suc k) = {!!}
-zan zero (suc b) (suc k) = {!!}
-zan (suc a) (suc b) (suc k) = {!zan a b (suc k)!}
+difference-steps : ∀ a b k → difference (k + a) (k + b) ≡ difference a b
+difference-steps a b zero = refl
+difference-steps a b (suc k) = difference-steps a b k
 
-zon : ∀ a b k → difference (a * k) (b * k) ≡ (difference a b) * k
-zon a b zero = {!!}
-zon a b (suc k) = {!!}
+a+k*[1+a]≡k+[1+k]*a : ∀ a k → a + k * suc a ≡ k + (suc k) * a
+a+k*[1+a]≡k+[1+k]*a a k = begin
+   a + k * suc a     ≡⟨ cong (_+_ a) (*-comm k _) ⟩
+   a + suc a * k     ≡⟨ cong (_+_ a) refl ⟩
+   a + (k + a * k)   ≡⟨ sym (+-assoc a k (a * k)) ⟩
+   (a + k) + a * k   ≡⟨ cong (flip _+_ (a * k)) (+-comm a k) ⟩
+   (k + a) + a * k   ≡⟨ +-assoc k a (a * k) ⟩
+   k + (a + a * k)   ≡⟨ cong ((_+_ k) ∘ (_+_ a)) (*-comm a k) ⟩
+   k + (a + k * a)   ≡⟨ refl ⟩
+   k + (suc k) * a   ∎
+ where open ≡-Reasoning
 
-unique-remainder : ∀ dividend divisor → (dm₀ : DivMod dividend divisor) → (dm₁ : DivMod dividend divisor) → DivMod.remainder dm₀ ≡ DivMod.remainder dm₁
-unique-remainder dividend divisor dm₀ dm₁ with difference (toℕ (DivMod.remainder dm₀)) (toℕ (DivMod.remainder dm₁)) | inspect (difference (toℕ (DivMod.remainder dm₀))) (toℕ (DivMod.remainder dm₁))
-... | 0 | [ eq ] = cancel-toℕ _ _ (zero-difference eq)
+difference-left-factor : ∀ a b k → difference (k * a) (k * b) ≡ k * (difference a b)
+difference-left-factor a b zero = refl
+difference-left-factor a zero (suc k) = cong (difference (suc k * a)) (*-right-zero (suc k))
+difference-left-factor zero (suc b) (suc k) = cong (flip difference (suc k * suc b)) (*-right-zero (suc k))
+difference-left-factor (suc a) (suc b) (suc k) = begin
+   difference (a + k * suc a) (b + k * suc b)       ≡⟨ cong₂ difference (a+k*[1+a]≡k+[1+k]*a a k) (a+k*[1+a]≡k+[1+k]*a b k) ⟩
+   difference (k + (a + k * a)) (k + (b + k * b))   ≡⟨ difference-steps _ _ k ⟩
+   difference (a + k * a) (b + k * b)               ≡⟨ difference-left-factor a b (suc k) ⟩
+   suc k * difference a b                           ∎
+ where open ≡-Reasoning
+
+difference-right-factor : ∀ a b k → difference (a * k) (b * k) ≡ (difference a b) * k
+difference-right-factor a b k = begin
+   difference (a * k) (b * k)     ≡⟨ cong₂ difference (*-comm a k) (*-comm b k) ⟩
+   difference (k * a) (k * b)     ≡⟨ difference-left-factor a b k ⟩
+   k * (difference a b)           ≡⟨ *-comm k _ ⟩
+   (difference a b) * k           ∎
+ where open ≡-Reasoning
+
+i*[1+j]≡0⇒i≡0 : ∀ i {j} → i * suc j ≡ 0 → i ≡ 0
+i*[1+j]≡0⇒i≡0 zero eq = refl
+i*[1+j]≡0⇒i≡0 (suc i) ()
+
+unique-divMod : ∀ dividend divisor {d≢0 : False (divisor ≟ 0)} → (dm₀ : DivMod dividend divisor) → (dm₁ : DivMod dividend divisor) → (DivMod.remainder dm₀ ≡ DivMod.remainder dm₁) × (DivMod.quotient dm₀ ≡ DivMod.quotient dm₁)
+unique-divMod _ 0 {()}
+unique-divMod dividend (suc divisor-1) dm₀ dm₁ with
+   difference (toℕ (DivMod.remainder dm₀)) (toℕ (DivMod.remainder dm₁))
+   | inspect (difference (toℕ (DivMod.remainder dm₀))) (toℕ (DivMod.remainder dm₁))
+... | 0 | [ eq ] = cancel-toℕ _ _ (zero-difference eq) , zero-difference (i*[1+j]≡0⇒i≡0 q-diff factor-eq)
+ where
+  divisor = suc divisor-1
+  r₀ = DivMod.remainder dm₀
+  r₁ = DivMod.remainder dm₁
+  q₀ = DivMod.quotient dm₀
+  q₁ = DivMod.quotient dm₁
+  r-diff = difference (toℕ r₀) (toℕ r₁)
+  q-diff = difference q₀ q₁
+  lem₀ : r-diff ≡ 0
+  lem₀ = eq
+  equiv : toℕ r₀ + q₀ * divisor ≡ toℕ r₁ + q₁ * divisor
+  equiv = trans (sym (DivMod.property dm₀)) (DivMod.property dm₁)
+  lem₁ : difference (q₀ * divisor) (q₁ * divisor) ≡ 0
+  lem₁ = trans (sym (rearrange-+-eq (toℕ r₀) _ (toℕ r₁) _ equiv)) eq
+  factor-eq : q-diff * divisor ≡ 0
+  factor-eq = trans (sym (difference-right-factor q₀ q₁ divisor)) lem₁
 ... | suc r-diff-1 | [ eq ] = contradiction lem₀ (a≤b→¬b<a (∣⇒≤ divisible))
  where
+  divisor = suc divisor-1
   r₀ = DivMod.remainder dm₀
   r₁ = DivMod.remainder dm₁
   q₀ = DivMod.quotient dm₀
@@ -113,9 +165,6 @@ unique-remainder dividend divisor dm₀ dm₁ with difference (toℕ (DivMod.rem
   lem₁ : r-diff ≡ difference (q₀ * divisor) (q₁ * divisor)
   lem₁ = trans (sym eq) (rearrange-+-eq (toℕ r₀) _ (toℕ r₁) _ equiv)
   factor-eq : r-diff ≡ q-diff * divisor
-  factor-eq = trans lem₁ (zon q₀ q₁ divisor)
+  factor-eq = trans lem₁ (difference-right-factor q₀ q₁ divisor)
   divisible : divisor ∣ r-diff
   divisible = divides q-diff factor-eq
-
-unique-quotient : ∀ dividend divisor → (dm₀ : DivMod dividend divisor) → (dm₁ : DivMod dividend divisor) → DivMod.quotient dm₀ ≡ DivMod.quotient dm₁
-unique-quotient = {!!}

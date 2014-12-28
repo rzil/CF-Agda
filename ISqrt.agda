@@ -3,17 +3,18 @@ module ISqrt where
 -- integer square roots
 -- http://en.wikipedia.org/wiki/Integer_square_root
 
-open import Data.Nat
+open import Data.Nat as Nat
 open import Data.Nat.Properties
 open import Data.Nat.Properties.Simple
 open import Data.Nat.DivMod
 open import Relation.Binary
 open import Relation.Nullary
+open import Relation.Nullary.Negation
 open import Relation.Nullary.Decidable
 open import Relation.Binary.PropositionalEquality
 open import Data.Product
 open import Function
-open import Data.Fin renaming (_≤_ to _F≤_; _+_ to _F+_; _<_ to _F<_; zero to fzero; suc to fsuc)
+open import Data.Fin as Fin renaming (_≤_ to _F≤_; _+_ to _F+_; _<_ to _F<_; zero to fzero; suc to fsuc)
 open import Data.Fin.Properties hiding (_≟_)
 open import Data.Unit hiding (_≤_; _≤?_; _≟_)
 --open import Induction.WellFounded
@@ -130,9 +131,47 @@ toℕ-inject₁ : ∀ {n} i → toℕ {n} i ≡ toℕ (inject₁ i)
 toℕ-inject₁ fzero = refl
 toℕ-inject₁ (fsuc i) = cong suc (toℕ-inject₁ i)
 
-zing : ∀ n k i → (suc n) mod (suc k) ≡ fsuc i → n mod (suc k) ≡ (inject₁ i)
-zing n k i [1+n]%[1+k]≡[1+i] = {!!}
- where [1+n]_dm = (suc n) divMod (suc k)
+mod-class : ∀ n k → n mod (suc k) ≡ (n + (suc k)) mod (suc k)
+mod-class n k = {!DivMod.property ((n + (suc k)) divMod (suc k))!}
+
+div-class : ∀ n k → suc (n div (suc k)) ≡ (n + (suc k)) div (suc k)
+div-class n k = {!!}
+
+div-pred : ∀ n k → (suc n) mod (suc k) ≢ fzero → (suc n) div (suc k) ≡ n div (suc k)
+div-pred n k x with n div (suc k) | (suc n) div (suc k)
+... | 0 | 0 = refl
+... | suc _ | 0 = {!!}
+... | 0 | suc _ = {!!}
+... | suc n/[1+k] | suc [1+n]/[1+k] = {!div-class (suc (n ∸ suc k)) (n ∸ suc k) k (div-pred (n ∸ (suc k)) k ?)!}
+
+cancel-+-right : ∀ i {j k} → j + i ≡ k + i → j ≡ k
+cancel-+-right i {j} {k} eq = cancel-+-left i {j} {k} (begin i + j ≡⟨ +-comm i j ⟩ j + i ≡⟨ eq ⟩ k + i ≡⟨ +-comm k i ⟩ i + k ∎)
+ where open ≡-Reasoning
+
+cancel-toℕ : ∀ {n} i j → toℕ {n} i ≡ toℕ j → i ≡ j
+cancel-toℕ fzero fzero eq = refl
+cancel-toℕ fzero (fsuc _) ()
+cancel-toℕ (fsuc _) fzero ()
+cancel-toℕ (fsuc i) (fsuc j) eq = cong fsuc (cancel-toℕ i j (cong Nat.pred eq))
+
+cancel-inject₁ : ∀ {n} i j → inject₁ {n} i ≡ inject₁ j → i ≡ j
+cancel-inject₁ fzero fzero eq = refl
+cancel-inject₁ fzero (fsuc _) ()
+cancel-inject₁ (fsuc _) fzero ()
+cancel-inject₁ {suc n} (fsuc i-1) (fsuc j-1) eq = cong fsuc (cancel-inject₁ i-1 j-1 (cong (λ {fzero → fzero; (fsuc z) → reduce≥ (fsuc z) (s≤s z≤n)}) eq))
+
+mod-pred : ∀ n k i → (suc n) mod (suc k) ≡ fsuc i → n mod (suc k) ≡ (inject₁ i)
+mod-pred n k i [1+n]%[1+k]≡[1+i] = cancel-inject₁ _ _ (cong Fin.pred (cancel-toℕ _ _ lem₁))
+ where open ≡-Reasoning
+       lem₀ : (toℕ (fsuc (n mod (suc k)))) + (n div (suc k)) * (suc k) ≡ toℕ (fsuc i) + (n div (suc k)) * (suc k)
+       lem₀ = begin
+          (toℕ (fsuc (n mod (suc k)))) + (n div (suc k)) * (suc k)     ≡⟨ sym (cong suc (DivMod.property (n divMod (suc k)))) ⟩
+          suc n                                                        ≡⟨ DivMod.property ((suc n) divMod (suc k)) ⟩
+          toℕ ((suc n) mod (suc k)) + ((suc n) div (suc k)) * (suc k)  ≡⟨ cong (λ z → toℕ z + ((suc n) div (suc k)) * (suc k)) [1+n]%[1+k]≡[1+i] ⟩
+          toℕ (fsuc i) + ((suc n) div (suc k)) * (suc k)               ≡⟨ cong (λ z → toℕ (fsuc i) + z * (suc k)) (div-pred n k (λ z → contradiction (begin fzero ≡⟨ sym z ⟩ (suc n) mod (suc k) ≡⟨ [1+n]%[1+k]≡[1+i] ⟩ fsuc i ∎) (λ ()))) ⟩
+          toℕ (fsuc i) + (n div (suc k)) * (suc k)  ∎
+       lem₁ : toℕ (fsuc (n mod (suc k))) ≡ toℕ (inject₁ (fsuc i))
+       lem₁ = begin _ ≡⟨ cancel-+-right _ lem₀ ⟩ toℕ (fsuc i) ≡⟨ toℕ-inject₁ _ ⟩ _ ∎
 
 div-monotonic : ∀ n k {k≢0 : False (k ≟ 0)} → _div_ n k {k≢0} ≤ _div_ (suc n) k {k≢0}
 div-monotonic _ 0 {()}
@@ -161,7 +200,7 @@ div-monotonic n (suc k-1) {k≢0} with _mod_ (suc n) (suc k-1) {k≢0} | inspect
        [1+n]%k≡1+i : (suc n) mod k ≡ fsuc i
        [1+n]%k≡1+i = eq
        n%k≡i : n mod k ≡ (inject₁ i)
-       n%k≡i = zing n k-1 i [1+n]%k≡1+i
+       n%k≡i = mod-pred n k-1 i [1+n]%k≡1+i
        lem₀ : toℕ (fsuc i) + ((suc n) div k) * k ≡ toℕ (fsuc i) + (n div k) * k
        lem₀ = begin
          toℕ (fsuc i) + ((suc n) div k) * k            ≡⟨ cong (λ z → toℕ z + ((suc n) div k) * k) {fsuc i} {(suc n) mod k} (sym [1+n]%k≡1+i) ⟩

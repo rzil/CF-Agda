@@ -129,6 +129,9 @@ i*[1+j]≡0⇒i≡0 : ∀ i {j} → i * suc j ≡ 0 → i ≡ 0
 i*[1+j]≡0⇒i≡0 zero eq = refl
 i*[1+j]≡0⇒i≡0 (suc i) ()
 
+---------------
+-- Main theorem
+---------------
 unique-divMod : ∀ dividend divisor {d≢0 : False (divisor ≟ 0)} → (dm₀ : DivMod dividend divisor) → (dm₁ : DivMod dividend divisor) → (DivMod.remainder dm₀ ≡ DivMod.remainder dm₁) × (DivMod.quotient dm₀ ≡ DivMod.quotient dm₁)
 unique-divMod _ 0 {()}
 unique-divMod dividend (suc divisor-1) dm₀ dm₁ with
@@ -174,3 +177,24 @@ unique-divMod dividend (suc divisor-1) dm₀ dm₁ with
   factor-eq = trans lem₁ (difference-right-factor q₀ q₁ divisor)
   divisible : divisor ∣ r-diff
   divisible = divides q-diff factor-eq
+
+------------
+-- Corollary
+------------
+divMod-step : ∀ n k → (n mod (suc k) ≡ (n + (suc k)) mod (suc k)) × (suc (n div (suc k)) ≡ (n + (suc k)) div (suc k))
+divMod-step n k = unique-divMod (n + suc k) (suc k) lem ((n + suc k) divMod (suc k))
+ where
+  r₀ = n mod (suc k)
+  r₁ = (n + suc k) mod (suc k)
+  q₀ = n div (suc k)
+  q₁ = (n + suc k) div (suc k)
+  property : n + suc k ≡ toℕ r₀ + (suc q₀) * (suc k)
+  property = begin
+     n + suc k                           ≡⟨ cong (flip _+_ (suc k)) (DivMod.property (n divMod (suc k))) ⟩
+     (toℕ r₀ + q₀ * (suc k)) + suc k     ≡⟨ +-assoc (toℕ r₀) _ _ ⟩
+     toℕ r₀ + (q₀ * (suc k) + suc k)     ≡⟨ cong (_+_ (toℕ r₀)) (+-comm _ (suc k)) ⟩
+     toℕ r₀ + (suc k + q₀ * (suc k))     ≡⟨ refl ⟩
+     toℕ r₀ + (suc q₀) * (suc k)         ∎
+   where open ≡-Reasoning
+  lem : DivMod (n + suc k) (suc k)
+  lem = result (suc q₀) r₀ property

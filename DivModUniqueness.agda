@@ -131,6 +131,7 @@ i*[1+j]≡0⇒i≡0 (suc i) ()
 
 ---------------
 -- Main theorem
+-- The uniqueness of the quotient and remainder from the division algorithm on natural numbers
 ---------------
 unique-divMod : ∀ dividend divisor {d≢0 : False (divisor ≟ 0)} → (dm₀ : DivMod dividend divisor) → (dm₁ : DivMod dividend divisor) → (DivMod.remainder dm₀ ≡ DivMod.remainder dm₁) × (DivMod.quotient dm₀ ≡ DivMod.quotient dm₁)
 unique-divMod _ 0 {()}
@@ -180,6 +181,8 @@ unique-divMod dividend (suc divisor-1) dm₀ dm₁ with
 
 ------------
 -- Corollary
+-- If you add the divisor to the dividend, then the remainder is unchanged.
+-- The quotient increases by one.
 ------------
 divMod-step : ∀ n k → (n mod (suc k) ≡ (n + (suc k)) mod (suc k)) × (suc (n div (suc k)) ≡ (n + (suc k)) div (suc k))
 divMod-step n k = unique-divMod (n + suc k) (suc k) lem ((n + suc k) divMod (suc k))

@@ -5,6 +5,7 @@ Author: Ruben Zilibowitz
 Date: 28th December 2014
 Description: Proof of the uniqueness of the division algorithm on natural numbers.
  Also a simple corollary of this.
+License: BSD New. See file LICENSE
 -}
 
 open import Data.Nat as Nat

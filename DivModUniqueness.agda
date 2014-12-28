@@ -1,5 +1,12 @@
 module DivModUniqueness where
 
+{-
+Author: Ruben Zilibowitz
+Date: 28th December 2014
+Description: Proof of the uniqueness of the division algorithm on natural numbers.
+ Also a simple corollary of this.
+-}
+
 open import Data.Nat as Nat
 open import Data.Nat.Properties
 open import Data.Nat.Properties.Simple

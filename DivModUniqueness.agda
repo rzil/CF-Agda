@@ -71,9 +71,15 @@ difference-comm (suc _) zero = refl
 difference-comm (suc a) (suc b) = difference-comm a b
 
 rearrange-+-eq : ∀ a b c d → a + b ≡ c + d → difference a c ≡ difference b d
-rearrange-+-eq zero .(c + d) c d refl = begin difference zero c ≡⟨ difference-comm 0 c ⟩ c ≡⟨ sym (difference-cancel c d) ⟩ difference (c + d) d ∎
+rearrange-+-eq zero .(c + d) c d refl = begin
+   difference zero c    ≡⟨ difference-comm 0 c ⟩
+   c                    ≡⟨ sym (difference-cancel c d) ⟩
+   difference (c + d) d ∎
  where open ≡-Reasoning
-rearrange-+-eq a b zero .(a + b) refl = begin a ≡⟨ sym (difference-cancel a b) ⟩ difference (a + b) b ≡⟨ difference-comm (a + b) b ⟩ difference b (a + b) ∎
+rearrange-+-eq a b zero .(a + b) refl = begin
+   a                      ≡⟨ sym (difference-cancel a b) ⟩
+   difference (a + b) b   ≡⟨ difference-comm (a + b) b ⟩
+   difference b (a + b)   ∎
  where open ≡-Reasoning
 rearrange-+-eq (suc a) (suc b) (suc c) (suc d) eq = rearrange-+-eq a b c d (begin
    a + b                ≡⟨ cong pred (sym (k+[1+z]≡1+[k+z] a b)) ⟩

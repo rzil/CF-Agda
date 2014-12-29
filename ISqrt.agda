@@ -83,9 +83,9 @@ a<b→n+a<n+b : ∀ n {a b} → a < b → n + a < n + b
 a<b→n+a<n+b zero a<b = a<b
 a<b→n+a<n+b (suc n) a<b = s≤s (a<b→n+a<n+b n a<b)
 
-thm : ∀ n x {x≢0 : False (x ≟ 0)} {n<x*x : n < x * x} → step n x {x≢0} <′ x
-thm n 0 {()}
-thm n (suc x-1) {_} {n<x*x} = ≤⇒≤′ (div-left (x + (n div x)) x 2 lem)
+step-decreasing : ∀ n x {x≢0 : False (x ≟ 0)} {n<x*x : n < x * x} → step n x {x≢0} <′ x
+step-decreasing n 0 {()}
+step-decreasing n (suc x-1) {_} {n<x*x} = ≤⇒≤′ (div-left (x + (n div x)) x 2 lem)
  where open ≤-Reasoning
        x = suc x-1
        lem : x + (n div x) < 2 * x
@@ -116,22 +116,6 @@ n/1≡n {n} = begin
  where dm = n divMod 1
        open ≡-Reasoning
 
-cancel-+-right : ∀ i {j k} → j + i ≡ k + i → j ≡ k
-cancel-+-right i {j} {k} eq = cancel-+-left i {j} {k} (begin i + j ≡⟨ +-comm i j ⟩ j + i ≡⟨ eq ⟩ k + i ≡⟨ +-comm k i ⟩ i + k ∎)
- where open ≡-Reasoning
-
-cancel-toℕ : ∀ {n} i j → toℕ {n} i ≡ toℕ j → i ≡ j
-cancel-toℕ fzero fzero eq = refl
-cancel-toℕ fzero (fsuc _) ()
-cancel-toℕ (fsuc _) fzero ()
-cancel-toℕ (fsuc i) (fsuc j) eq = cong fsuc (cancel-toℕ i j (cong Nat.pred eq))
-
-cancel-inject₁ : ∀ {n} i j → inject₁ {n} i ≡ inject₁ j → i ≡ j
-cancel-inject₁ fzero fzero eq = refl
-cancel-inject₁ fzero (fsuc _) ()
-cancel-inject₁ (fsuc _) fzero ()
-cancel-inject₁ {suc n} (fsuc i-1) (fsuc j-1) eq = cong fsuc (cancel-inject₁ i-1 j-1 (cong (λ {fzero → fzero; (fsuc z) → reduce≥ (fsuc z) (s≤s z≤n)}) eq))
-
 step≢0 : ∀ n x {n≢0 : False (n ≟ 0)} {x≢0 : False (x ≟ 0)} → ¬ step n x {x≢0} ≡ 0
 step≢0 0 _ {()}
 step≢0 _ 0 {_} {()}
@@ -161,8 +145,9 @@ step≢0 (suc n-1) (suc (suc x-2)) = 0<n→n≢0 lem
     (x + (n div x)) div 2  ≡⟨ refl ⟩
     step n x               ∎
 
-data Terminates (n x : ℕ) : Set where
-  termination-proof : (∀ y → (y <′ x) → Terminates n y) → Terminates n x
+private
+ data Terminates (n x : ℕ) : Set where
+   termination-proof : (∀ y → (y <′ x) → Terminates n y) → Terminates n x
 
 isqrtGo : (n : ℕ) → (x : ℕ) → {x≢0 : False (x ≟ 0)} → Terminates n x → ℕ
 isqrtGo 0 _ _ = 0
@@ -170,22 +155,23 @@ isqrtGo _ 0 {()}
 isqrtGo (suc n-1) (suc x-1) {_} (termination-proof term) with (2 + n-1) ≤? ((suc x-1) * (suc x-1))
 ... | no _ = suc x-1
 ... | yes n<x*x = isqrtGo n (step n x {tt}) {fromWitnessFalse (step≢0 n x)}
-                  (term (step n x {tt}) (thm n x {tt} {n<x*x}))
+                  (term (step n x {tt}) (step-decreasing n x {tt} {n<x*x}))
  where n = suc n-1
        x = suc x-1
 
-baseCase : ∀ {n} y → (y <′ zero) → Terminates n y
-baseCase _ ()
+private
+ baseCase : ∀ {n} y → (y <′ zero) → Terminates n y
+ baseCase _ ()
 
-generateTerminationProof : ∀ {n} y → Terminates n y
+ generateTerminationProof : ∀ {n} y → Terminates n y
 
-induction : ∀ {m} (n : ℕ) → (y : ℕ) → (y <′ n) → Terminates m y
-induction n zero _ = termination-proof baseCase
-induction .(suc (suc y')) (suc y') ≤′-refl =  generateTerminationProof (suc y')
-induction .(suc n) (suc y') (≤′-step {n} m≤′n) = induction n (suc y') m≤′n
+ induction : ∀ {m} (n : ℕ) → (y : ℕ) → (y <′ n) → Terminates m y
+ induction n zero _ = termination-proof baseCase
+ induction .(suc (suc y')) (suc y') ≤′-refl =  generateTerminationProof (suc y')
+ induction .(suc n) (suc y') (≤′-step {n} m≤′n) = induction n (suc y') m≤′n
 
-generateTerminationProof zero = termination-proof baseCase
-generateTerminationProof (suc limit) = termination-proof (induction (suc limit))
+ generateTerminationProof zero = termination-proof baseCase
+ generateTerminationProof (suc limit) = termination-proof (induction (suc limit))
 
 isqrt : ℕ → ℕ
 isqrt 0 = 0

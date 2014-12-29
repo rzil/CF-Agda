@@ -33,7 +33,7 @@ unique-divMod _ 0 {()}
 unique-divMod dividend (suc divisor-1) dm₀ dm₁ with
    difference (toℕ (DivMod.remainder dm₀)) (toℕ (DivMod.remainder dm₁))
    | inspect (difference (toℕ (DivMod.remainder dm₀))) (toℕ (DivMod.remainder dm₁))
-... | 0 | [ eq ] = cancel-toℕ _ _ (zero-difference eq) , zero-difference (i*[1+j]≡0⇒i≡0 q-diff factor-eq)
+... | 0 | [ eq ] = toℕ-injective (zero-difference eq) , zero-difference (i*[1+j]≡0⇒i≡0 q-diff factor-eq)
  where
   divisor = suc divisor-1
   r₀ = DivMod.remainder dm₀
@@ -97,6 +97,10 @@ divMod-step n k = unique-divMod (n + suc k) (suc k) lem ((n + suc k) divMod (suc
   lem : DivMod (n + suc k) (suc k)
   lem = result (suc q₀) r₀ property
 
+toℕ-inject₁ : ∀ {n} {i : Fin n} → toℕ i ≡ toℕ (inject₁ i)
+toℕ-inject₁ {i = fzero} = refl
+toℕ-inject₁ {i = fsuc i} = cong suc (toℕ-inject₁ {i = i})
+
 ---------------------------------------------------------
 -- Integer division by a constant is monotonic increasing
 ---------------------------------------------------------
@@ -140,4 +144,17 @@ div-monotonic n (suc k-1) with (suc n) mod (suc k-1) | inspect (λ z → _mod_ z
   final-lemma = cancel-*-right _ _ (trans (sym property₀) property₁)
   open ≤-Reasoning
 
-... | fsuc i | [ eq ] = {!!}
+... | fsuc i | [ eq ] = begin q₀ ≡⟨ lem ⟩ q₁ ∎
+ where
+  k = suc k-1
+  r₀ = n mod k
+  r₁ = (suc n) mod k
+  q₀ = n div k
+  q₁ = (suc n) div k
+  property₁ : suc n ≡ suc (toℕ i) + q₁ * k
+  property₁ = trans (DivMod.property ((suc n) divMod k)) (cong ((flip _+_ (q₁ * k)) ∘ toℕ) eq)
+  property₀ : n ≡ toℕ (inject₁ i) + q₁ * k
+  property₀ = trans (cong pred property₁) (cong (flip _+_ (q₁ * k)) {toℕ i} toℕ-inject₁)
+  lem : q₀ ≡ q₁
+  lem = proj₂ (unique-divMod n k (n divMod k) ((result _ (inject₁ i) property₀)))
+  open ≤-Reasoning

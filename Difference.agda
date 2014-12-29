@@ -43,12 +43,6 @@ difference-bounded fzero (fsuc b) = s≤s (bounded b)
 difference-bounded (fsuc a) fzero = s≤s (bounded a)
 difference-bounded (fsuc a) (fsuc b) = ≤-step (difference-bounded a b)
 
-cancel-toℕ : ∀ {n} i j → toℕ {n} i ≡ toℕ j → i ≡ j
-cancel-toℕ fzero fzero eq = refl
-cancel-toℕ fzero (fsuc _) ()
-cancel-toℕ (fsuc _) fzero ()
-cancel-toℕ (fsuc i) (fsuc j) eq = cong fsuc (cancel-toℕ i j (cong Nat.pred eq))
-
 difference-cancel : ∀ a b → difference (a + b) b ≡ a
 difference-cancel zero zero = refl
 difference-cancel zero (suc b) = difference-cancel zero b

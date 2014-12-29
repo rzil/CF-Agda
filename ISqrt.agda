@@ -22,26 +22,26 @@ open import Lemmas
 open import DivModUniqueness
 
 _IsIntegerSqrtOf_ : ℕ → ℕ → Set
-_IsIntegerSqrtOf_ n m = n * n ≤ m × m ≤ (suc n) * (suc n)
+_IsIntegerSqrtOf_ n m = n * n ≤ m × m < (suc n) * (suc n)
 
 _√?_ : Decidable {A = ℕ} _IsIntegerSqrtOf_
-_√?_ n m with (n * n) ≤? m | m ≤? ((suc n) * (suc n))
+_√?_ n m with (n * n) ≤? m | suc m ≤? ((suc n) * (suc n))
 ... | yes x | yes y = yes (x , y)
 ... | no x | _ = no (x ∘ proj₁)
 ... | _ | no y = no (y ∘ proj₂)
 
 √0≡0 : 0 IsIntegerSqrtOf 0
-√0≡0 = z≤n , z≤n
+√0≡0 = z≤n , s≤s z≤n
 
 √1≡1 : 1 IsIntegerSqrtOf 1
-√1≡1 = s≤s z≤n , s≤s z≤n
+√1≡1 = s≤s z≤n , s≤s (s≤s z≤n)
 
 √10≡3 : 3 IsIntegerSqrtOf 10
 √10≡3 = from-yes (3 √? 10)
 
 step : ℕ → (x : ℕ) → {x≢0 : False (x ≟ 0)} → ℕ
 step _ 0 {()}
-step n (suc x-1) {1≤x} = (x + (n div x)) div 2
+step n (suc x-1) = (x + (n div x)) div 2
  where x = suc x-1
 
 private
@@ -179,14 +179,57 @@ isqrt (suc n-1) = isqrtGo n n {tt} (generateTerminationProof n)
  where n = suc n-1
 
 record ISqrt (n : ℕ) : Set where
+ constructor isqrt-result
  field
   ⌊√n⌋ : ℕ
   property : ⌊√n⌋ IsIntegerSqrtOf n
 
 {-
-stepFixPoint : ∀ n x {x≢0 : False (x ≟ 0)} → step n x {x≢0} ≡ x → x IsIntegerSqrtOf n
-stepFixPoint n x stepnx≡x = {!!}
+isqrtPrf : (n : ℕ) → (x : ℕ) → {x≢0 : False (x ≟ 0)} {n<x*x : n < x * x} → Terminates n x → ISqrt n
+isqrtPrf 0 _ _ = isqrt-result 0 √0≡0
+isqrtPrf _ 0 {()}
+isqrtPrf (suc n-1) (suc x-1) {_} {n<x*x} (termination-proof term) with let fnx = step (suc n-1) (suc x-1) in (2 + n-1) ≤? (fnx * fnx)
+... | no ¬n<fnx^2 = isqrt-result (step (suc n-1) (suc x-1)) (¬b<a→a≤b ¬n<fnx^2 , {!!})
+... | yes n<fnx^2 = {!!} --isqrtPrf n (step n x {tt}) {fromWitnessFalse (step≢0 n x)}
+                  --(term (step n x {tt}) (step-decreasing n x {tt} {n<x*x}))
+ where n = suc n-1
+       x = suc x-1
+-}
 
+step-n^2-n : ∀ n {n≢0 : False (n ≟ 0)} → step (n * n) n {n≢0} ≡ n
+step-n^2-n 0 {()}
+step-n^2-n (suc n-1) {n≢0} = begin
+   (n + ((n * n) div n)) div 2    ≡⟨ cong (λ z → (n + z) div 2) (n^2/n≡n n) ⟩
+   (n + n) div 2                  ≡⟨ cong (λ z → z div 2) (n+n≡n*2 n) ⟩
+   (n * 2) div 2                  ≡⟨ n*d/d≡n n 2 ⟩
+   n                              ∎
+ where n = suc n-1
+       open ≡-Reasoning
+
+stepFixPoint : ∀ n x {x≢0 : False (x ≟ 0)} → step n x {x≢0} ≡ x → x IsIntegerSqrtOf n
+stepFixPoint _ 0 {()}
+stepFixPoint n (suc x-1) fnx≡x = lem₂ , {!!}
+ where
+  x = suc x-1
+  open ≤-Reasoning
+  lem₀ : 2 * x ≤ (x + (n div x))
+  lem₀ = begin
+    2 * x                          ≡⟨ *-comm 2 x ⟩
+    x * 2                          ≡⟨ cong (flip _*_ 2) (sym fnx≡x) ⟩
+    ((x + (n div x)) div 2) * 2    ≤⟨ n/d*d≤n _ 2 ⟩
+    x + (n div x)                  ∎
+  lem₁ : (x * x) + (x * x) ≤ x * x + n
+  lem₁ = begin
+    _                       ≡⟨ n+n≡2*n (x * x) ⟩
+    2 * (x * x)             ≡⟨ sym (*-assoc 2 x x) ⟩
+    (2 * x) * x             ≤⟨ a≤b→ak≤bk {k = x} lem₀ ⟩
+    (x + (n div x)) * x     ≡⟨ distribʳ-*-+ x x _ ⟩
+    x * x + (n div x) * x   ≤⟨ add-≤ (n≤n (x * x)) (n/d*d≤n n x) ⟩
+    x * x + n               ∎
+  lem₂ : x * x ≤ n
+  lem₂ = cancel-+-left-≤ (x * x) lem₁
+
+{-
 stepTwoCycle : ∀ n x {x≢0 : False (x ≟ 0)} → step n x {x≢0} ≡ suc x → x IsIntegerSqrtOf n
 stepTwoCycle n x stepnx≡1+x = {!!}
 

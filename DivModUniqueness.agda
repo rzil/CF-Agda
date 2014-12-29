@@ -74,6 +74,12 @@ unique-divMod dividend (suc divisor-1) dm₀ dm₁ with
   divisible : divisor ∣ r-diff
   divisible = divides q-diff factor-eq
 
+unique-mod : ∀ dividend divisor {d≢0 : False (divisor ≟ 0)} → (dm₀ : DivMod dividend divisor) → (dm₁ : DivMod dividend divisor) → (DivMod.remainder dm₀ ≡ DivMod.remainder dm₁)
+unique-mod n d {d≢0} x y = proj₁ (unique-divMod n d {d≢0} x y)
+
+unique-div : ∀ dividend divisor {d≢0 : False (divisor ≟ 0)} → (dm₀ : DivMod dividend divisor) → (dm₁ : DivMod dividend divisor) → (DivMod.quotient dm₀ ≡ DivMod.quotient dm₁)
+unique-div n d {d≢0} x y = proj₂ (unique-divMod n d {d≢0} x y)
+
 ------------
 -- Corollary
 -- If you add the divisor to the dividend, then the remainder is unchanged.
@@ -121,7 +127,7 @@ div-monotonic n (suc k-1) with (suc n) mod (suc k-1) | inspect (λ z → _mod_ z
   lem₀ : r₀ ≡ fromℕ≤ {k-1} (n≤n k)
   lem₀ with ((suc n) div k) | inspect (λ z → _div_ z k) (suc n)
   ... | 0 | [ eq ] = contradiction (trans property₁ (cong (flip _*_ k) eq)) (λ ())
-  ... | suc q₁-1 | [ eq ] = proj₁ (unique-divMod n k (n divMod k) (result q₁-1 (fromℕ≤ {k-1} (n≤n k)) property-n)) 
+  ... | suc q₁-1 | [ eq ] = unique-mod n k (n divMod k) (result q₁-1 (fromℕ≤ {k-1} (n≤n k)) property-n)
    where
     property-n : n ≡ toℕ (fromℕ≤ {k-1} (n≤n k)) + q₁-1 * k
     property-n = begin
@@ -152,7 +158,7 @@ div-monotonic n (suc k-1) with (suc n) mod (suc k-1) | inspect (λ z → _mod_ z
   property₀ : n ≡ toℕ (inject₁ i) + q₁ * k
   property₀ = trans (cong pred property₁) (cong (flip _+_ (q₁ * k)) {toℕ i} toℕ-inject₁)
   lem : q₀ ≡ q₁
-  lem = proj₂ (unique-divMod n k (n divMod k) ((result _ (inject₁ i) property₀)))
+  lem = unique-div n k (n divMod k) ((result _ (inject₁ i) property₀))
   open ≤-Reasoning
 
 ----
@@ -176,3 +182,21 @@ div-steps n (suc m-1) (suc k-1) = begin
    _div_ (m ∸ n + n) k {k≢0}    ≡⟨ cong (λ z → _div_ z k {k≢0}) (m∸n+n≡m n m n≤m) ⟩
    _div_ m k {k≢0}              ∎
  where open ≤-Reasoning
+
+n*d/d≡n : ∀ n d {d≢0 : False (d ≟ 0)} → _div_ (n * d) d {d≢0} ≡ n
+n*d/d≡n _ 0 {()}
+n*d/d≡n n (suc d-1) = unique-div (n * d) d ((n * d) divMod d) (result n (fzero {d-1}) refl)
+ where d = suc d-1
+
+n^2/n≡n : ∀ n {n≢0 : False (n ≟ 0)} → _div_ (n * n) n {n≢0} ≡ n
+n^2/n≡n n = n*d/d≡n n n
+
+n/d*d≤n : ∀ n d {d≢0 : False (d ≟ 0)} → (_div_ n d {d≢0}) * d ≤ n
+n/d*d≤n _ 0 {()}
+n/d*d≤n n (suc d-1) = begin
+   (n div d) * d   ≤⟨ ≤-steps (toℕ (DivMod.remainder (n divMod d))) (n≤n _) ⟩
+   _               ≡⟨ sym (DivMod.property (n divMod d)) ⟩
+   n               ∎
+ where
+  d = suc d-1
+  open ≤-Reasoning

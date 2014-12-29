@@ -41,3 +41,7 @@ a+k*[1+a]≡k+[1+k]*a a k = begin
 i*[1+j]≡0⇒i≡0 : ∀ i {j} → i * suc j ≡ 0 → i ≡ 0
 i*[1+j]≡0⇒i≡0 zero eq = refl
 i*[1+j]≡0⇒i≡0 (suc i) ()
+
+n≤n : ∀ n → n ≤ n
+n≤n zero = z≤n
+n≤n (suc n-1) = s≤s (n≤n n-1)

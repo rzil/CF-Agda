@@ -53,10 +53,6 @@ private
  n≤0→n≡0 {0} _ = refl
  n≤0→n≡0 {suc _} ()
 
- n≤n : ∀ n → n ≤ n
- n≤n zero = z≤n
- n≤n (suc n-1) = s≤s (n≤n n-1)
-
 cancel-*-right-< : ∀ i j k → i * suc k < j * suc k → i < j
 cancel-*-right-< zero    zero       _ ()
 cancel-*-right-< zero    (suc j-1)  _ _  = s≤s z≤n

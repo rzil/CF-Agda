@@ -9,10 +9,12 @@ License: BSD New. See file LICENSE
 -}
 
 open import Data.Nat as Nat
+open import Data.Nat.Properties
 open import Data.Nat.Properties.Simple
 open import Data.Nat.DivMod
 open import Data.Nat.Divisibility
 open import Data.Fin hiding (_+_; _-_; _<_; _≤_) renaming (zero to fzero; suc to fsuc; pred to fpred)
+open import Data.Fin.Properties hiding (_≟_)
 open import Relation.Binary.PropositionalEquality
 open import Relation.Nullary.Negation
 open import Data.Product
@@ -95,19 +97,47 @@ divMod-step n k = unique-divMod (n + suc k) (suc k) lem ((n + suc k) divMod (suc
   lem : DivMod (n + suc k) (suc k)
   lem = result (suc q₀) r₀ property
 
-
-div-pred : ∀ n k → (suc n) mod (suc k) ≢ fzero → fpred ((suc n) mod (suc k)) ≡ (n mod (suc k)) × (suc n) div (suc k) ≡ n div (suc k)
-div-pred n k x = unique-divMod n (suc k) lem (n divMod (suc k))
+---------------------------------------------------------
+-- Integer division by a constant is monotonic increasing
+---------------------------------------------------------
+div-monotonic : ∀ n k {k≢0 : False (k ≟ 0)} → _div_ n k {k≢0} ≤ _div_ (suc n) k {k≢0}
+div-monotonic _ 0 {()}
+div-monotonic n (suc k-1) with (suc n) mod (suc k-1) | inspect (λ z → _mod_ z (suc k-1)) (suc n)
+... | fzero | [ eq ] = begin q₀ ≤⟨ ≤-step (n≤n q₀) ⟩ suc q₀ ≡⟨ final-lemma ⟩ q₁ ∎
  where
-  r₀ = (suc n) mod (suc k)
-  r₁ = n mod (suc k)
-  q₀ = (suc n) div (suc k)
-  q₁ = n div (suc k)
-  property : n ≡ toℕ (fpred r₀) + q₀ * (suc k)
-  property = begin
-     n                                 ≡⟨ cong pred (DivMod.property ((suc n) divMod (suc k))) ⟩
-     pred (toℕ r₀ + q₀ * (suc k))      ≡⟨ {!!} ⟩
-     toℕ (fpred r₀) + q₀ * (suc k)     ∎
+  k = suc k-1
+  r₀ = n mod k
+  r₁ = (suc n) mod k
+  q₀ = n div k
+  q₁ = (suc n) div k
+  property₁ : suc n ≡ q₁ * k
+  property₁ = begin
+     suc n               ≡⟨ DivMod.property ((suc n) divMod k) ⟩
+     toℕ r₁ + q₁ * k     ≡⟨ cong (λ z → toℕ z + q₁ * k) eq ⟩
+     q₁ * k              ∎
    where open ≡-Reasoning
-  lem : DivMod n (suc k)
-  lem = result q₀ (fpred r₀) property
+  divMod₁ : DivMod (suc n) k
+  divMod₁ = result q₁ fzero property₁
+  lem₀ : r₀ ≡ fromℕ≤ {k-1} (n≤n k)
+  lem₀ with ((suc n) div k) | inspect (λ z → _div_ z k) (suc n)
+  ... | 0 | [ eq ] = contradiction (trans property₁ (cong (flip _*_ k) eq)) (λ ())
+  ... | suc q₁-1 | [ eq ] = proj₁ (unique-divMod n k (n divMod k) (result q₁-1 (fromℕ≤ {k-1} (n≤n k)) property-n)) 
+   where
+    property-n : n ≡ toℕ (fromℕ≤ {k-1} (n≤n k)) + q₁-1 * k
+    property-n = begin
+       n                   ≡⟨ cong pred (trans property₁ (cong (flip _*_ k) eq)) ⟩
+       k-1 + q₁-1 * k      ≡⟨ cong (flip _+_ (q₁-1 * k)) (sym (toℕ-fromℕ≤ {k-1} (n≤n k))) ⟩
+       _                   ∎
+     where open ≡-Reasoning
+  property₀ : suc n ≡ (suc q₀) * k
+  property₀ = begin
+     suc n                                               ≡⟨ cong suc (DivMod.property (n divMod k)) ⟩
+     _                                                   ≡⟨ cong (suc ∘ (flip _+_ ((n div k) * k)) ∘ toℕ) lem₀ ⟩
+     suc (toℕ (fromℕ≤ {k-1} (n≤n k)) + (n div k) * k)    ≡⟨ cong (suc ∘ (flip _+_ ((n div k) * k))) (toℕ-fromℕ≤ {k-1} (n≤n k)) ⟩
+     (suc q₀) * k                                         ∎
+   where open ≡-Reasoning
+  final-lemma : suc q₀ ≡ q₁
+  final-lemma = cancel-*-right _ _ (trans (sym property₀) property₁)
+  open ≤-Reasoning
+
+... | fsuc i | [ eq ] = {!!}

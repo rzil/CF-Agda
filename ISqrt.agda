@@ -116,13 +116,6 @@ n/1≡n {n} = begin
  where dm = n divMod 1
        open ≡-Reasoning
 
-div-pred : ∀ n k → (suc n) mod (suc k) ≢ fzero → (suc n) div (suc k) ≡ n div (suc k)
-div-pred n k x with n div (suc k) | (suc n) div (suc k)
-... | 0 | 0 = refl
-... | suc _ | 0 = {!!}
-... | 0 | suc _ = {!!}
-... | suc n/[1+k] | suc [1+n]/[1+k] = {!div-class (suc (n ∸ suc k)) (n ∸ suc k) k (div-pred (n ∸ (suc k)) k ?)!}
-
 cancel-+-right : ∀ i {j k} → j + i ≡ k + i → j ≡ k
 cancel-+-right i {j} {k} eq = cancel-+-left i {j} {k} (begin i + j ≡⟨ +-comm i j ⟩ j + i ≡⟨ eq ⟩ k + i ≡⟨ +-comm k i ⟩ i + k ∎)
  where open ≡-Reasoning
@@ -144,15 +137,29 @@ step≢0 0 _ {()}
 step≢0 _ 0 {_} {()}
 step≢0 1 1 ()
 step≢0 (suc (suc n-2)) 1 = 0<n→n≢0 lem₂
- where n = 2 + n-2
-       lem₀ : (step n 1) ≡ ((suc n) div 2)
-       lem₀ = cong (λ z → (1 + z) div 2) {n div 1} {n} n/1≡n
-       lem₁ : 0 < (suc n) div 2
-       lem₁ = ≤-div 2 (suc n) 2 (s≤s (s≤s z≤n))
-       open ≤-Reasoning
-       lem₂ : 0 < step n 1
-       lem₂ = begin 0 <⟨ lem₁ ⟩ (suc n) div 2 ≡⟨ sym lem₀ ⟩ step n 1 ∎
-step≢0 (suc n-1) (suc (suc x-2)) fnx≡0 = {!!}
+ where
+  n = 2 + n-2
+  lem₀ : (step n 1) ≡ ((suc n) div 2)
+  lem₀ = cong (λ z → (1 + z) div 2) {n div 1} {n} n/1≡n
+  lem₁ : 0 < (suc n) div 2
+  lem₁ = ≤-div 2 (suc n) 2 (s≤s (s≤s z≤n))
+  open ≤-Reasoning
+  lem₂ : 0 < step n 1
+  lem₂ = begin 0 <⟨ lem₁ ⟩ (suc n) div 2 ≡⟨ sym lem₀ ⟩ step n 1 ∎
+step≢0 (suc n-1) (suc (suc x-2)) = 0<n→n≢0 lem
+ where
+  n = suc n-1
+  x = 2 + x-2
+  open ≤-Reasoning
+  lem : 0 < step n x
+  lem = begin
+    0                      <⟨ s≤s z≤n ⟩
+    suc (x-2 div 2)        ≡⟨ proj₂ (divMod-step x-2 _) ⟩
+    (x-2 + 2) div 2        ≡⟨ cong (λ z → z div 2) (+-comm x-2 2) ⟩
+    x div 2                ≤⟨ div-steps x (n div x) 2 ⟩
+    ((n div x) + x) div 2  ≡⟨ cong (λ z → z div 2) (+-comm (n div x) x) ⟩
+    (x + (n div x)) div 2  ≡⟨ refl ⟩
+    step n x               ∎
 
 data Terminates (n x : ℕ) : Set where
   termination-proof : (∀ y → (y <′ x) → Terminates n y) → Terminates n x
@@ -190,6 +197,7 @@ record ISqrt (n : ℕ) : Set where
   ⌊√n⌋ : ℕ
   property : ⌊√n⌋ IsIntegerSqrtOf n
 
+{-
 stepFixPoint : ∀ n x {x≢0 : False (x ≟ 0)} → step n x {x≢0} ≡ x → x IsIntegerSqrtOf n
 stepFixPoint n x stepnx≡x = {!!}
 
@@ -201,3 +209,4 @@ isqrtProof n = record {
   ⌊√n⌋ = isqrt n;
   property = {!!}
  }
+-}

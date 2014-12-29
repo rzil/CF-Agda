@@ -116,10 +116,6 @@ n/1≡n {n} = begin
  where dm = n divMod 1
        open ≡-Reasoning
 
-toℕ-inject₁ : ∀ {n} i → toℕ {n} i ≡ toℕ (inject₁ i)
-toℕ-inject₁ fzero = refl
-toℕ-inject₁ (fsuc i) = cong suc (toℕ-inject₁ i)
-
 div-pred : ∀ n k → (suc n) mod (suc k) ≢ fzero → (suc n) div (suc k) ≡ n div (suc k)
 div-pred n k x with n div (suc k) | (suc n) div (suc k)
 ... | 0 | 0 = refl
@@ -142,93 +138,6 @@ cancel-inject₁ fzero fzero eq = refl
 cancel-inject₁ fzero (fsuc _) ()
 cancel-inject₁ (fsuc _) fzero ()
 cancel-inject₁ {suc n} (fsuc i-1) (fsuc j-1) eq = cong fsuc (cancel-inject₁ i-1 j-1 (cong (λ {fzero → fzero; (fsuc z) → reduce≥ (fsuc z) (s≤s z≤n)}) eq))
-
-mod-pred : ∀ n k i → (suc n) mod (suc k) ≡ fsuc i → n mod (suc k) ≡ (inject₁ i)
-mod-pred n k i [1+n]%[1+k]≡[1+i] = cancel-inject₁ _ _ (cong Fin.pred (cancel-toℕ _ _ lem₁))
- where open ≡-Reasoning
-       lem₀ : (toℕ (fsuc (n mod (suc k)))) + (n div (suc k)) * (suc k) ≡ toℕ (fsuc i) + (n div (suc k)) * (suc k)
-       lem₀ = begin
-          (toℕ (fsuc (n mod (suc k)))) + (n div (suc k)) * (suc k)     ≡⟨ sym (cong suc (DivMod.property (n divMod (suc k)))) ⟩
-          suc n                                                        ≡⟨ DivMod.property ((suc n) divMod (suc k)) ⟩
-          toℕ ((suc n) mod (suc k)) + ((suc n) div (suc k)) * (suc k)  ≡⟨ cong (λ z → toℕ z + ((suc n) div (suc k)) * (suc k)) [1+n]%[1+k]≡[1+i] ⟩
-          toℕ (fsuc i) + ((suc n) div (suc k)) * (suc k)               ≡⟨ cong (λ z → toℕ (fsuc i) + z * (suc k)) (div-pred n k (λ z → contradiction (begin fzero ≡⟨ sym z ⟩ (suc n) mod (suc k) ≡⟨ [1+n]%[1+k]≡[1+i] ⟩ fsuc i ∎) (λ ()))) ⟩
-          toℕ (fsuc i) + (n div (suc k)) * (suc k)  ∎
-       lem₁ : toℕ (fsuc (n mod (suc k))) ≡ toℕ (inject₁ (fsuc i))
-       lem₁ = begin _ ≡⟨ cancel-+-right _ lem₀ ⟩ toℕ (fsuc i) ≡⟨ toℕ-inject₁ _ ⟩ _ ∎
-
-div-monotonic : ∀ n k {k≢0 : False (k ≟ 0)} → _div_ n k {k≢0} ≤ _div_ (suc n) k {k≢0}
-div-monotonic _ 0 {()}
-div-monotonic n (suc k-1) {k≢0} with _mod_ (suc n) (suc k-1) {k≢0} | inspect (λ z → _mod_ z (suc k-1) {k≢0}) (suc n)
-... | fzero | [ eq ] = cancel-*-right-≤ _ _ k-1 lem₁
- where k = suc k-1
-       [1+n]%k≡0 : (suc n) mod k ≡ fzero
-       [1+n]%k≡0 = eq
-       lem₀ : (suc (toℕ (n mod k))) + (n div k) * k ≡ ((suc n) div k) * k
-       lem₀ = begin
-          (suc (toℕ (n mod k))) + (n div k) * k       ≡⟨ sym (cong suc (DivMod.property (n divMod k))) ⟩
-          suc n                                       ≡⟨ DivMod.property ((suc n) divMod k) ⟩
-          toℕ ((suc n) mod k) + ((suc n) div k) * k   ≡⟨ cong (λ z → toℕ z + ((suc n) div k) * k)  [1+n]%k≡0  ⟩
-          ((suc n) div k) * k                         ∎
-        where open ≡-Reasoning
-       lem₁ : (n div k) * k ≤ ((suc n) div k) * k
-       lem₁ = begin
-         (n div k) * k                                 ≤⟨ ≤-steps (suc (toℕ (n mod k))) (n≤n _) ⟩
-         (suc (toℕ (n mod k))) + (n div k) * k         ≡⟨ lem₀ ⟩
-         ((suc n) div k) * k                           ∎
-        where open ≤-Reasoning
-... | fsuc i | [ eq ] = begin n div k ≡⟨ sym lem₁ ⟩ (suc n) div k ∎
- where k = suc k-1
-       n_dm = n divMod k
-       [1+n]_dm = (suc n) divMod k
-       [1+n]%k≡1+i : (suc n) mod k ≡ fsuc i
-       [1+n]%k≡1+i = eq
-       n%k≡i : n mod k ≡ (inject₁ i)
-       n%k≡i = mod-pred n k-1 i [1+n]%k≡1+i
-       lem₀ : toℕ (fsuc i) + ((suc n) div k) * k ≡ toℕ (fsuc i) + (n div k) * k
-       lem₀ = begin
-         toℕ (fsuc i) + ((suc n) div k) * k            ≡⟨ cong (λ z → toℕ z + ((suc n) div k) * k) {fsuc i} {(suc n) mod k} (sym [1+n]%k≡1+i) ⟩
-         toℕ ((suc n) mod k) + ((suc n) div k) * k     ≡⟨ sym (DivMod.property [1+n]_dm) ⟩
-         suc n                                         ≡⟨ cong suc (DivMod.property n_dm) ⟩
-         suc (toℕ (n mod k) + (n div k) * k)           ≡⟨ sym (+-assoc 1 (toℕ (n mod k)) _) ⟩
-         (suc (toℕ (n mod k))) + (n div k) * k         ≡⟨ cong (flip _+_ ((n div k) * k)) {suc (toℕ (n mod k))} refl ⟩
-         (toℕ (fsuc (n mod k))) + (n div k) * k        ≡⟨ cong (λ z → toℕ (fsuc z) + (n div k) * k) n%k≡i ⟩
-         toℕ (fsuc (inject₁ i)) + (n div k) * k        ≡⟨ cong (λ z → (suc z) + (n div k) * k) (sym (toℕ-inject₁ i)) ⟩
-         toℕ (fsuc i) + (n div k) * k                  ∎
-        where open ≡-Reasoning
-       lem₁ : (suc n) div k ≡ n div k
-       lem₁ = cancel-*-right _ _ (cancel-+-left (toℕ (fsuc i)) lem₀)
-       open ≤-Reasoning
-
-div-blam : ∀ n m k {k≢0 : False (k ≟ 0)} → _div_ n k {k≢0} ≤ _div_ (m + n) k {k≢0}
-div-blam _ _ 0 {()}
-div-blam _ zero _ = n≤n _
-div-blam n (suc m-1) (suc k-1) = begin
-   n div k                ≤⟨ div-blam n m-1 k ⟩
-   (m-1 + n) div k        ≤⟨ div-monotonic (m-1 + n) k ⟩
-   (suc (m-1 + n)) div k  ≡⟨ cong (λ z → z div k) (sym (+-assoc 1 m-1 n)) ⟩
-   (m + n) div k          ∎
- where open ≤-Reasoning
-       m = suc m-1
-       k = suc k-1
-
-m∸n+n≡m : ∀ n m → n ≤ m → (m ∸ n) + n ≡ m
-m∸n+n≡m zero m _ = +-right-identity m
-m∸n+n≡m (suc _) zero ()
-m∸n+n≡m (suc n-1) (suc m-1) n≤m = begin
-   (m ∸ n) + n                 ≡⟨ sym (+-assoc (m-1 ∸ n-1) 1 n-1) ⟩
-   ((m-1 ∸ n-1) + 1) + n-1     ≡⟨ cong (flip _+_ n-1) (+-comm (m-1 ∸ n-1) 1) ⟩
-   suc ((m-1 ∸ n-1) + n-1)     ≡⟨ cong suc (m∸n+n≡m n-1 m-1 (≤-pred n≤m)) ⟩
-   m                           ∎
- where open ≡-Reasoning
-       n = suc n-1
-       m = suc m-1
-
-≤-div : ∀ n m k {k≢0 : False (k ≟ 0)} → n ≤ m → _div_ n k {k≢0} ≤ _div_ m k {k≢0}
-≤-div n m k {k≢0} n≤m = begin
-   _div_ n k {k≢0}              ≤⟨ div-blam n (m ∸ n) k ⟩
-   _div_ (m ∸ n + n) k {k≢0}    ≡⟨ cong (λ z → _div_ z k {k≢0}) (m∸n+n≡m n m n≤m) ⟩
-   _div_ m k {k≢0}              ∎
- where open ≤-Reasoning
 
 step≢0 : ∀ n x {n≢0 : False (n ≟ 0)} {x≢0 : False (x ≟ 0)} → ¬ step n x {x≢0} ≡ 0
 step≢0 0 _ {()}

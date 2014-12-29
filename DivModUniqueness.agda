@@ -97,10 +97,6 @@ divMod-step n k = unique-divMod (n + suc k) (suc k) lem ((n + suc k) divMod (suc
   lem : DivMod (n + suc k) (suc k)
   lem = result (suc q₀) r₀ property
 
-toℕ-inject₁ : ∀ {n} {i : Fin n} → toℕ i ≡ toℕ (inject₁ i)
-toℕ-inject₁ {i = fzero} = refl
-toℕ-inject₁ {i = fsuc i} = cong suc (toℕ-inject₁ {i = i})
-
 ---------------------------------------------------------
 -- Integer division by a constant is monotonic increasing
 ---------------------------------------------------------
@@ -158,3 +154,25 @@ div-monotonic n (suc k-1) with (suc n) mod (suc k-1) | inspect (λ z → _mod_ z
   lem : q₀ ≡ q₁
   lem = proj₂ (unique-divMod n k (n divMod k) ((result _ (inject₁ i) property₀)))
   open ≤-Reasoning
+
+----
+-- More theorems about _div_
+----
+div-steps : ∀ n m k {k≢0 : False (k ≟ 0)} → _div_ n k {k≢0} ≤ _div_ (m + n) k {k≢0}
+div-steps _ _ 0 {()}
+div-steps _ zero _ = n≤n _
+div-steps n (suc m-1) (suc k-1) = begin
+   n div k                ≤⟨ div-steps n m-1 k ⟩
+   (m-1 + n) div k        ≤⟨ div-monotonic (m-1 + n) k ⟩
+   (suc (m-1 + n)) div k  ≡⟨ cong (λ z → z div k) (sym (+-assoc 1 m-1 n)) ⟩
+   (m + n) div k          ∎
+ where open ≤-Reasoning
+       m = suc m-1
+       k = suc k-1
+
+≤-div : ∀ n m k {k≢0 : False (k ≟ 0)} → n ≤ m → _div_ n k {k≢0} ≤ _div_ m k {k≢0}
+≤-div n m k {k≢0} n≤m = begin
+   _div_ n k {k≢0}              ≤⟨ div-steps n (m ∸ n) k ⟩
+   _div_ (m ∸ n + n) k {k≢0}    ≡⟨ cong (λ z → _div_ z k {k≢0}) (m∸n+n≡m n m n≤m) ⟩
+   _div_ m k {k≢0}              ∎
+ where open ≤-Reasoning

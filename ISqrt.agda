@@ -4,6 +4,7 @@ module ISqrt where
 -- http://en.wikipedia.org/wiki/Integer_square_root
 
 open import Data.Nat as Nat
+--open import Data.Nat.Divisibility
 open import Data.Nat.Properties
 open import Data.Nat.Properties.Simple
 open import Data.Nat.DivMod
@@ -119,7 +120,7 @@ step≢0 (suc (suc n-2)) 1 = 0<n→n≢0 lem₂
   lem₀ : (step n 1) ≡ ((suc n) div 2)
   lem₀ = cong (λ z → (1 + z) div 2) {n div 1} {n} n/1≡n
   lem₁ : 0 < (suc n) div 2
-  lem₁ = ≤-div 2 (suc n) 2 (s≤s (s≤s z≤n))
+  lem₁ = div-k-≤ 2 (suc n) 2 (s≤s (s≤s z≤n))
   open ≤-Reasoning
   lem₂ : 0 < step n 1
   lem₂ = begin 0 <⟨ lem₁ ⟩ (suc n) div 2 ≡⟨ sym lem₀ ⟩ step n 1 ∎
@@ -199,15 +200,32 @@ step-n^2-n≡n (suc n-1) {n≢0} = begin
  where n = suc n-1
        open ≡-Reasoning
 
-bling : ∀ {a b n} {a≢0 : False (a ≟ 0)} {b≢0 : False (b ≟ 0)} → a < b → _div_ n b {b≢0} ≤ _div_ n a {a≢0}
-bling {a = 0} {a≢0 = ()}
-bling {b = 0} {b≢0 = ()}
-bling {suc a-1} {suc b-1} {n} a<b = {!!}
-
 -- y < x --> n/y >= n/x --> (y + n/y)/2 >= (y + n/x)/2 -[fny≡y]-> y >= (y + n/x)/2 -[x*x≤n]-> y >= floor (y + x)/2 --> 2*y >= x + y --> y >= x --> contradiction
 zing : ∀ n x y {y≢0 : False (y ≟ 0)} → (x * x) ≤ n → step n y {y≢0} ≡ y → x ≤ y
 zing _ _ 0 {()}
-zing n x (suc y-1) x*x≤n fny≡y = ¬b<a→a≤b (λ z → {!z!})
+zing _ 0 _ _ _ = z≤n
+zing n (suc x-1) (suc y-1) x*x≤n fny≡y = ¬b<a→a≤b (λ y<x → {!!})
+ where
+  x = suc x-1
+  y = suc y-1
+  open ≤-Reasoning
+  lem₀ : x ≤ n div x
+  lem₀ = begin _ ≡⟨ sym (n*d/d≡n x x) ⟩ _ ≤⟨ div-k-≤ _ _ x x*x≤n ⟩ _ ∎
+  lem₁ : (y + x) div 2 ≤ (y + (n div x)) div 2
+  lem₁ = div-k-≤ _ _ 2 (add-≤ (n≤n y) lem₀)
+  lem₂ : y < x → (y + x) div 2 ≤ y
+  lem₂ y<x = begin _ ≤⟨ lem₁ ⟩ _ ≤⟨ div-k-≤ _ _ 2 (add-≤ (n≤n y) (divisor-≤ n y x (≤-pred (≤-step y<x)))) ⟩ _ ≡⟨ fny≡y ⟩ _ ∎
+  lem₃ : y < x → y + x ≤ y + y
+  lem₃ y<x with (y + x) mod 2 | inspect (λ z → z mod 2) (y + x)
+  ... | fzero | [ eq ] = begin
+    y + x                 ≡⟨ DivMod.property ((y + x) divMod 2) ⟩
+    toℕ ((y + x) mod 2) + (y + x) div 2 * 2   ≡⟨ cong (flip _+_ _) (cong toℕ eq) ⟩
+    (y + x) div 2 * 2     ≤⟨ mul-≤ (lem₂ y<x) (n≤n 2) ⟩
+    y * 2                 ≡⟨ *-comm y 2 ⟩
+    2 * y                 ≡⟨ cong ((_+_ y) ∘ suc) (+-right-identity y-1) ⟩
+    y + y                 ∎
+  ... | fsuc fzero | [ eq ] = {!sym eq!}
+  ... | fsuc (fsuc ()) | _
 
 stepFixPoint : ∀ n x {x≢0 : False (x ≟ 0)} → step n x {x≢0} ≡ x → x IsIntegerSqrtOf n
 stepFixPoint _ 0 {()}
@@ -225,7 +243,7 @@ stepFixPoint n (suc x-1) fnx≡x = lem₂ , ¬b<a→a≤b (λ z → ¬[1+n]≤n 
   lem₁ = begin
     _                       ≡⟨ n+n≡2*n (x * x) ⟩
     2 * (x * x)             ≡⟨ sym (*-assoc 2 x x) ⟩
-    (2 * x) * x             ≤⟨ a≤b→ak≤bk {k = x} lem₀ ⟩
+    (2 * x) * x             ≤⟨ a≤b→ak≤bk x lem₀ ⟩
     (x + (n div x)) * x     ≡⟨ distribʳ-*-+ x x _ ⟩
     x * x + (n div x) * x   ≤⟨ add-≤ (n≤n (x * x)) (n/d*d≤n n x) ⟩
     x * x + n               ∎

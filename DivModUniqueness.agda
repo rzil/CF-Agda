@@ -9,6 +9,7 @@ License: BSD New. See file LICENSE
 -}
 
 open import Data.Nat as Nat
+open import Data.Nat.Divisibility
 open import Data.Nat.Properties
 open import Data.Nat.Properties.Simple
 open import Data.Nat.DivMod
@@ -177,8 +178,8 @@ div-steps n (suc m-1) (suc k-1) = begin
        m = suc m-1
        k = suc k-1
 
-≤-div : ∀ n m k {k≢0 : False (k ≟ 0)} → n ≤ m → _div_ n k {k≢0} ≤ _div_ m k {k≢0}
-≤-div n m k {k≢0} n≤m = begin
+div-k-≤ : ∀ n m k {k≢0 : False (k ≟ 0)} → n ≤ m → _div_ n k {k≢0} ≤ _div_ m k {k≢0}
+div-k-≤ n m k {k≢0} n≤m = begin
    _div_ n k {k≢0}              ≤⟨ div-steps n (m ∸ n) k ⟩
    _div_ (m ∸ n + n) k {k≢0}    ≡⟨ cong (λ z → _div_ z k {k≢0}) (m∸n+n≡m n m n≤m) ⟩
    _div_ m k {k≢0}              ∎
@@ -268,7 +269,7 @@ product-divMod a b (suc d-1) with (difference ((toℕ (a mod (suc d-1))) * b) (t
   lem₇ = cancel-+-left-≤ (toℕ ((a * b) mod d)) (begin
     _   ≡⟨ sym (+-assoc (toℕ ((a * b) mod d)) d (((a div d) * b) * d)) ⟩
     _   ≡⟨ cong (flip _+_ _) (+-comm _ d) ⟩
-    _   ≤⟨ add-k-≤ lem₅ ⟩
+    _   ≤⟨ add-k-≤ _ lem₅ ⟩
     _   ≡⟨ lem₀ ⟩
     _   ∎)
   lem₈ : (suc ((a div d) * b)) ≤ ((a * b) div d)
@@ -280,10 +281,10 @@ product-mod a b d {d≢0} = proj₁ (product-divMod a b d {d≢0})
 product-div : ∀ a b d {d≢0 : False (d ≟ 0)} → (_div_ a d {d≢0}) * b ≤ _div_ (a * b) d {d≢0}
 product-div a b d {d≢0} = proj₂ (product-divMod a b d {d≢0})
 
-larger-divisor : ∀ n d {d≢0 : False (d ≟ 0)} e {e≢0 : False (e ≟ 0)} → d ≤ e → _div_ n e {e≢0} ≤ _div_ n d {d≢0}
-larger-divisor _ 0 {()}
-larger-divisor _ _ 0 {()}
-larger-divisor n (suc d-1) (suc e-1) d≤e = begin n div e ≡⟨ sym (n*d/d≡n _ d) ⟩ _ ≤⟨ eq₂ ⟩ n div d ∎
+divisor-≤ : ∀ n d {d≢0 : False (d ≟ 0)} e {e≢0 : False (e ≟ 0)} → d ≤ e → _div_ n e {e≢0} ≤ _div_ n d {d≢0}
+divisor-≤ _ 0 {()}
+divisor-≤ _ _ 0 {()}
+divisor-≤ n (suc d-1) (suc e-1) d≤e = begin n div e ≡⟨ sym (n*d/d≡n _ d) ⟩ _ ≤⟨ eq₂ ⟩ n div d ∎
  where
   d = suc d-1
   e = suc e-1
@@ -291,10 +292,16 @@ larger-divisor n (suc d-1) (suc e-1) d≤e = begin n div e ≡⟨ sym (n*d/d≡n
   eq₀ = a≤b→ka≤kb n d≤e
   open ≤-Reasoning
   eq₁ : n div e * d ≤ n
-  eq₁ = begin _ ≤⟨ product-div n d e ⟩ _ ≤⟨ ≤-div _ _ e eq₀ ⟩ (n * e) div e ≡⟨ n*d/d≡n n e ⟩ n ∎
+  eq₁ = begin _ ≤⟨ product-div n d e ⟩ _ ≤⟨ div-k-≤ _ _ e eq₀ ⟩ (n * e) div e ≡⟨ n*d/d≡n n e ⟩ n ∎
   eq₂ : (n div e * d) div d ≤ n div d
-  eq₂ = ≤-div _ _ d eq₁
+  eq₂ = div-k-≤ _ _ d eq₁
 
 div-≤ : ∀ n m d {d≢0 : False (d ≟ 0)} e {e≢0 : False (e ≟ 0)} → n ≤ m → d ≤ e  → _div_ n e {e≢0} ≤ _div_ m d {d≢0}
-div-≤ n m d e n≤m d≤e = begin _ ≤⟨ larger-divisor n d e d≤e ⟩ _ ≤⟨ ≤-div n m d n≤m ⟩ _ ∎
+div-≤ n m d e n≤m d≤e = begin _ ≤⟨ divisor-≤ n d e d≤e ⟩ _ ≤⟨ div-k-≤ n m d n≤m ⟩ _ ∎
  where open ≤-Reasoning
+
+-- convert between ∣ datatype and DivMod quotient type
+∣-div : ∀ n d {d≢0 : False (d ≟ 0)} → (divis : d ∣ n) → quotient divis ≡ _div_ n d {d≢0}
+∣-div _ 0 {()}
+∣-div n (suc d-1) (divides q eq) = unique-div n d (result q fzero eq) (n divMod d)
+ where d = suc d-1

@@ -81,8 +81,8 @@ add-≤ {.0} {b} {._} {._} z≤n (s≤s c≤d) = begin _ ≤⟨ s≤s (add-≤ {
  where open ≤-Reasoning
 add-≤ {._} {._} {c} {d} (s≤s a≤b) c≤d = s≤s (add-≤ {_} {_} {c} {d} a≤b c≤d)
 
-add-k-≤ : ∀ {a b k} → a ≤ b → a + k ≤ b + k
-add-k-≤ {a} {b} {k} a≤b = add-≤ a≤b (n≤n k)
+add-k-≤ : ∀ {a b} k → a ≤ b → a + k ≤ b + k
+add-k-≤ {a} {b} k a≤b = add-≤ a≤b (n≤n k)
 
 [1+a]*[1+c]≡a+[1+c]+a*c : ∀ a c → (suc a) * (suc c) ≡ a + (suc c + a * c)
 [1+a]*[1+c]≡a+[1+c]+a*c a c = begin

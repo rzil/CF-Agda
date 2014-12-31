@@ -14,6 +14,7 @@ open import Data.Fin hiding (_+_; _-_; _<_; _≤_; pred) renaming (zero to fzero
 open import Data.Fin.Properties hiding (_≟_)
 open import Relation.Binary.PropositionalEquality
 open import Relation.Nullary
+open import Data.Sum
 open import Function
 
 open import Lemmas
@@ -28,12 +29,12 @@ difference x 0 = x
 difference 0 (suc y) = suc y
 difference (suc x) (suc y) = difference x y
 
-0-a : ∀ {a} → difference 0 a ≡ a
-0-a {zero} = refl
-0-a {suc a} = refl
+0-a≡a : ∀ {a} → difference 0 a ≡ a
+0-a≡a {zero} = refl
+0-a≡a {suc a} = refl
 
 zero-difference : ∀ {a b} → difference a b ≡ 0 → a ≡ b
-zero-difference {zero} eq = trans (sym eq) 0-a
+zero-difference {zero} eq = trans (sym eq) 0-a≡a
 zero-difference {suc _} {zero} eq = eq
 zero-difference {suc a} {suc b} eq = cong suc (zero-difference {a} {b} eq)
 
@@ -101,3 +102,16 @@ difference-right-factor a b k = begin
    k * (difference a b)           ≡⟨ *-comm k _ ⟩
    (difference a b) * k           ∎
  where open ≡-Reasoning
+
+difference-to-monus : ∀ a b → a ≤ b → difference a b ≡ b ∸ a
+difference-to-monus .0 b z≤n = 0-a≡a
+difference-to-monus (suc a) (suc b) (s≤s a≤b) = difference-to-monus a b a≤b
+
+open ≤-Reasoning
+
+≤-difference : ∀ d a b → d ≤ difference a b → (d + a ≤ b ⊎ d + b ≤ a)
+≤-difference d zero b d≤∣a-b∣ = inj₁ (begin d + 0 ≡⟨ +-right-identity d ⟩ d ≤⟨ d≤∣a-b∣ ⟩ _ ≡⟨ 0-a≡a ⟩ b ∎)
+≤-difference d (suc a) zero d≤∣a-b∣ = inj₂ (begin d + 0 ≡⟨ +-right-identity d ⟩ d ≤⟨ d≤∣a-b∣ ⟩ suc a ∎)
+≤-difference d (suc a) (suc b) d≤∣a-b∣ with ≤-difference d a b d≤∣a-b∣
+... | (inj₁ d+a≤b) = inj₁ (begin d + suc a ≡⟨ k+[1+z]≡1+[k+z] d a ⟩ suc d + a ≤⟨ s≤s d+a≤b ⟩ suc b  ∎)
+... | (inj₂ d+b≤a) = inj₂ (begin d + suc b ≡⟨ k+[1+z]≡1+[k+z] d b ⟩ suc d + b ≤⟨ s≤s d+b≤a ⟩ suc a  ∎)

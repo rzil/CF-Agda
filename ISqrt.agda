@@ -98,13 +98,6 @@ step-decreasing n (suc x-1) {_} {n<x*x} = ≤⇒≤′ (div-left (x + (n div x))
 n%1≡0 : ∀ n → toℕ (n mod 1) ≡ 0
 n%1≡0 n = n≤0→n≡0 (≤-pred (bounded (n mod 1)))
 
-*-right-identity : ∀ n → n * 1 ≡ n
-*-right-identity n = begin n * 1 ≡⟨ *-comm n 1 ⟩ 1 * n ≡⟨ +-right-identity n ⟩ n ∎
- where open ≡-Reasoning
-
-*-left-identity : ∀ n → 1 * n ≡ n
-*-left-identity = +-right-identity
-
 n/1≡n : ∀ {n} → n div 1 ≡ n
 n/1≡n {n} = begin
    n div 1                         ≡⟨ sym (*-left-identity _) ⟩
@@ -196,9 +189,9 @@ isqrtPrf (suc n-1) (suc x-1) {_} {n<x*x} (termination-proof term) with let fnx =
        x = suc x-1
 -}
 
-step-n^2-n : ∀ n {n≢0 : False (n ≟ 0)} → step (n * n) n {n≢0} ≡ n
-step-n^2-n 0 {()}
-step-n^2-n (suc n-1) {n≢0} = begin
+step-n^2-n≡n : ∀ n {n≢0 : False (n ≟ 0)} → step (n * n) n {n≢0} ≡ n
+step-n^2-n≡n 0 {()}
+step-n^2-n≡n (suc n-1) {n≢0} = begin
    (n + ((n * n) div n)) div 2    ≡⟨ cong (λ z → (n + z) div 2) (n^2/n≡n n) ⟩
    (n + n) div 2                  ≡⟨ cong (λ z → z div 2) (n+n≡n*2 n) ⟩
    (n * 2) div 2                  ≡⟨ n*d/d≡n n 2 ⟩
@@ -206,9 +199,19 @@ step-n^2-n (suc n-1) {n≢0} = begin
  where n = suc n-1
        open ≡-Reasoning
 
+bling : ∀ {a b n} {a≢0 : False (a ≟ 0)} {b≢0 : False (b ≟ 0)} → a < b → _div_ n b {b≢0} ≤ _div_ n a {a≢0}
+bling {a = 0} {a≢0 = ()}
+bling {b = 0} {b≢0 = ()}
+bling {suc a-1} {suc b-1} {n} a<b = {!!}
+
+-- y < x --> n/y >= n/x --> (y + n/y)/2 >= (y + n/x)/2 -[fny≡y]-> y >= (y + n/x)/2 -[x*x≤n]-> y >= floor (y + x)/2 --> 2*y >= x + y --> y >= x --> contradiction
+zing : ∀ n x y {y≢0 : False (y ≟ 0)} → (x * x) ≤ n → step n y {y≢0} ≡ y → x ≤ y
+zing _ _ 0 {()}
+zing n x (suc y-1) x*x≤n fny≡y = ¬b<a→a≤b (λ z → {!z!})
+
 stepFixPoint : ∀ n x {x≢0 : False (x ≟ 0)} → step n x {x≢0} ≡ x → x IsIntegerSqrtOf n
 stepFixPoint _ 0 {()}
-stepFixPoint n (suc x-1) fnx≡x = lem₂ , {!!}
+stepFixPoint n (suc x-1) fnx≡x = lem₂ , ¬b<a→a≤b (λ z → ¬[1+n]≤n (zing n (suc x) x (≤-pred z) fnx≡x))
  where
   x = suc x-1
   open ≤-Reasoning

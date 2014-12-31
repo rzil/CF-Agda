@@ -18,6 +18,7 @@ open import Data.Fin.Properties hiding (_≟_)
 open import Relation.Binary.PropositionalEquality
 open import Relation.Nullary.Negation
 open import Data.Product
+open import Data.Sum
 open import Function
 open import Relation.Nullary.Decidable
 
@@ -200,3 +201,92 @@ n/d*d≤n n (suc d-1) = begin
  where
   d = suc d-1
   open ≤-Reasoning
+
+--
+
+private
+ lemma₀ : ∀ a b d {d≢0 : False (d ≟ 0)} → a * b ≡ (toℕ (_mod_ a d {d≢0})) * b + ((_div_ a d {d≢0}) * b) * d
+ lemma₀ _ _ 0 {()}
+ lemma₀ a b (suc d-1) = begin
+     a * b                                        ≡⟨ cong (flip _*_ b) (DivMod.property (a divMod d)) ⟩
+     _                                            ≡⟨ distribʳ-*-+ b (toℕ (a mod d)) _ ⟩
+     (toℕ (a mod d)) * b + ((a div d) * d) * b    ≡⟨ cong (_+_ ((toℕ (a mod d)) * b)) (*-assoc (a div d) d b) ⟩
+     (toℕ (a mod d)) * b + (a div d) * (d * b)    ≡⟨ cong (λ z → (toℕ (a mod d)) * b + (a div d) * z) (*-comm d b) ⟩
+     (toℕ (a mod d)) * b + (a div d) * (b * d)    ≡⟨ cong (_+_ ((toℕ (a mod d)) * b)) (sym (*-assoc (a div d) b d)) ⟩
+     _ ∎
+  where d = suc d-1
+        open ≡-Reasoning
+
+------------------------------------------------------------
+-- [(a * b) % d ≤ (a % d) * b] × [(a / d) * b ≤ (a * b) / d]
+------------------------------------------------------------
+product-divMod : ∀ a b d {d≢0 : False (d ≟ 0)} → (toℕ (_mod_ (a * b) d {d≢0}) ≤ (toℕ (_mod_ a d {d≢0}) * b)) × ((_div_ a d {d≢0}) * b ≤ _div_ (a * b) d {d≢0})
+product-divMod _ _ zero {()}
+product-divMod a b (suc d-1) with (difference ((toℕ (a mod (suc d-1))) * b) (toℕ ((a * b) mod (suc d-1)))) | inspect (difference ((toℕ (a mod (suc d-1))) * b)) (toℕ ((a * b) mod (suc d-1)))
+... | 0 | [ eq ] = (begin _ ≡⟨ sym lem₀ ⟩ _ ∎) , (begin _ ≡⟨ sym lem₂ ⟩ _ ∎)
+ where
+  d = suc d-1
+  lem₀ : (toℕ (a mod d)) * b ≡ toℕ ((a * b) mod d)
+  lem₀ = zero-difference eq
+  lem₁ : a * b ≡ toℕ ((a * b) mod d) + ((a div d) * b) * d
+  lem₁ = begin
+    a * b                                        ≡⟨ lemma₀ a b d ⟩
+    (toℕ (a mod d)) * b + ((a div d) * b) * d    ≡⟨ cong (flip _+_ _) lem₀ ⟩
+    _                                            ∎
+   where open ≡-Reasoning
+  lem₂ : ((a * b) div d) ≡ ((a div d) * b)
+  lem₂ = cancel-*-right _ _ (cancel-+-left (toℕ ((a * b) mod d)) (trans (sym (DivMod.property ((a * b) divMod d))) lem₁))
+  open ≤-Reasoning
+... | suc r-diff-1 | [ eq ] = cancel-+-left-≤ d (≤-steps d lem₅) , (≤-pred (≤-step lem₈))
+ where
+  d = suc d-1
+  r-diff = suc r-diff-1
+  lem₀ : (toℕ (a mod d)) * b + (a div d) * b * d ≡ (toℕ ((a * b) mod d)) + ((a * b) div d) * d
+  lem₀ = trans (sym (lemma₀ a b d)) (DivMod.property ((a * b) divMod d))
+  lem₁ : r-diff ≡ (difference ((a div d) * b) ((a * b) div d)) * d
+  lem₁ = begin
+    r-diff     ≡⟨ sym eq ⟩
+    _          ≡⟨ rearrange-+-eq _ _ (toℕ ((a * b) mod d)) _ lem₀ ⟩
+    _          ≡⟨ difference-right-factor ((a div d) * b) ((a * b) div d) d ⟩
+    _          ∎
+   where open ≡-Reasoning
+  lem₂ : d ∣ r-diff
+  lem₂ = divides (difference ((a div d) * b) ((a * b) div d)) lem₁
+  lem₃ : d ≤ r-diff
+  lem₃ = ∣⇒≤ lem₂
+  lem₄ : (d + ((toℕ (a mod d)) * b) ≤ toℕ ((a * b) mod d)) ⊎ (d + toℕ ((a * b) mod d) ≤ (toℕ (a mod d)) * b)
+  open ≤-Reasoning
+  lem₄ = ≤-difference d _ _ ((begin _ ≤⟨ lem₃ ⟩ _ ≡⟨ sym eq ⟩ _ ∎))
+  lem₅ : d + toℕ ((a * b) mod d) ≤ (toℕ (a mod d)) * b
+  lem₅ with lem₄
+  ... | inj₁ x = contradiction lem₆ (λ ())
+   where
+    lem₆ : ((toℕ (a mod d)) * b) < 0
+    lem₆ = cancel-+-left-≤ d (begin _ ≡⟨ k+[1+z]≡1+[k+z] d ((toℕ (a mod d)) * b) ⟩ _ ≤⟨ s≤s x ⟩ _ <⟨ bounded ((a * b) mod d) ⟩ d ≡⟨ sym (+-right-identity d) ⟩ d + 0 ∎)
+  ... | inj₂ x = x
+  lem₇ : d + ((a div d) * b) * d ≤ ((a * b) div d) * d
+  lem₇ = cancel-+-left-≤ (toℕ ((a * b) mod d)) (begin
+    _   ≡⟨ sym (+-assoc (toℕ ((a * b) mod d)) d (((a div d) * b) * d)) ⟩
+    _   ≡⟨ cong (flip _+_ _) (+-comm _ d) ⟩
+    _   ≤⟨ add-k-≤ lem₅ ⟩
+    _   ≡⟨ lem₀ ⟩
+    _   ∎)
+  lem₈ : (suc ((a div d) * b)) ≤ ((a * b) div d)
+  lem₈ = cancel-*-right-≤ _ _ d-1 (begin (suc ((a div d) * b)) * d ≡⟨  distribʳ-*-+ d 1 ((a div d) * b) ⟩ 1 * d + ((a div d) * b) * d ≡⟨ cong (flip _+_ _) (*-left-identity d) ⟩ d + ((a div d) * b) * d ≤⟨ lem₇ ⟩ ((a * b) div d) * d ∎)
+
+zog : ∀ n d {d≢0 : False (d ≟ 0)} e {e≢0 : False (e ≟ 0)} → d ≤ e → _div_ n e {e≢0} ≤ _div_ n d {d≢0}
+zog _ 0 {()}
+zog _ _ 0 {()}
+zog n (suc d-1) (suc e-1) d≤e = {!!}
+ where
+  d = suc d-1
+  e = suc e-1
+  eq₀ : n * d ≤ n * e
+  eq₀ = a≤b→ka≤kb n d≤e
+  open ≤-Reasoning
+  eq₁ : (n * d) div e ≤ n
+  eq₁ = begin _ ≤⟨ ≤-div _ _ e eq₀ ⟩ (n * e) div e ≡⟨ n*d/d≡n n e ⟩ n ∎
+
+div-≤ : ∀ n m d {d≢0 : False (d ≟ 0)} e {e≢0 : False (e ≟ 0)} → n ≤ m → d ≤ e  → _div_ n e {e≢0} ≤ _div_ m d {d≢0}
+div-≤ n m d e n≤m d≤e = begin _ ≤⟨ zog n d e d≤e ⟩ _ ≤⟨ ≤-div n m d n≤m ⟩ _ ∎
+ where open ≤-Reasoning

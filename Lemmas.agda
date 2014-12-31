@@ -81,6 +81,9 @@ add-≤ {.0} {b} {._} {._} z≤n (s≤s c≤d) = begin _ ≤⟨ s≤s (add-≤ {
  where open ≤-Reasoning
 add-≤ {._} {._} {c} {d} (s≤s a≤b) c≤d = s≤s (add-≤ {_} {_} {c} {d} a≤b c≤d)
 
+add-k-≤ : ∀ {a b k} → a ≤ b → a + k ≤ b + k
+add-k-≤ {a} {b} {k} a≤b = add-≤ a≤b (n≤n k)
+
 [1+a]*[1+c]≡a+[1+c]+a*c : ∀ a c → (suc a) * (suc c) ≡ a + (suc c + a * c)
 [1+a]*[1+c]≡a+[1+c]+a*c a c = begin
    (suc c) + a * (suc c)       ≡⟨ cong (_+_ (suc c)) (*-comm a (suc c)) ⟩
@@ -101,5 +104,19 @@ mul-≤ {suc a} {suc b} {suc c} {suc d} (s≤s a≤b) (s≤s c≤d) = begin
    _       ∎
  where open ≤-Reasoning
 
-a≤b→ak≤bk : ∀ {a b k} → a ≤ b → a * k ≤ b * k
-a≤b→ak≤bk {_} {_} {k} a≤b = mul-≤ a≤b (n≤n k)
+a≤b→ak≤bk : ∀ {a b} k → a ≤ b → a * k ≤ b * k
+a≤b→ak≤bk {_} {_} k a≤b = mul-≤ a≤b (n≤n k)
+
+a≤b→ka≤kb : ∀ {a b} k → a ≤ b → k * a ≤ k * b
+a≤b→ka≤kb {_} {_} k a≤b = mul-≤ (n≤n k) a≤b
+
+¬[1+n]≤n : ∀ {n} → ¬ suc n ≤ n
+¬[1+n]≤n {zero} ()
+¬[1+n]≤n {suc n} x = ¬[1+n]≤n {n} (≤-pred x)
+
+*-right-identity : ∀ n → n * 1 ≡ n
+*-right-identity n = begin n * 1 ≡⟨ *-comm n 1 ⟩ 1 * n ≡⟨ +-right-identity n ⟩ n ∎
+ where open ≡-Reasoning
+
+*-left-identity : ∀ n → 1 * n ≡ n
+*-left-identity = +-right-identity

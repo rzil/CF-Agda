@@ -274,19 +274,27 @@ product-divMod a b (suc d-1) with (difference ((toℕ (a mod (suc d-1))) * b) (t
   lem₈ : (suc ((a div d) * b)) ≤ ((a * b) div d)
   lem₈ = cancel-*-right-≤ _ _ d-1 (begin (suc ((a div d) * b)) * d ≡⟨  distribʳ-*-+ d 1 ((a div d) * b) ⟩ 1 * d + ((a div d) * b) * d ≡⟨ cong (flip _+_ _) (*-left-identity d) ⟩ d + ((a div d) * b) * d ≤⟨ lem₇ ⟩ ((a * b) div d) * d ∎)
 
-zog : ∀ n d {d≢0 : False (d ≟ 0)} e {e≢0 : False (e ≟ 0)} → d ≤ e → _div_ n e {e≢0} ≤ _div_ n d {d≢0}
-zog _ 0 {()}
-zog _ _ 0 {()}
-zog n (suc d-1) (suc e-1) d≤e = {!!}
+product-mod : ∀ a b d {d≢0 : False (d ≟ 0)} → toℕ (_mod_ (a * b) d {d≢0}) ≤ (toℕ (_mod_ a d {d≢0}) * b)
+product-mod a b d {d≢0} = proj₁ (product-divMod a b d {d≢0})
+
+product-div : ∀ a b d {d≢0 : False (d ≟ 0)} → (_div_ a d {d≢0}) * b ≤ _div_ (a * b) d {d≢0}
+product-div a b d {d≢0} = proj₂ (product-divMod a b d {d≢0})
+
+larger-divisor : ∀ n d {d≢0 : False (d ≟ 0)} e {e≢0 : False (e ≟ 0)} → d ≤ e → _div_ n e {e≢0} ≤ _div_ n d {d≢0}
+larger-divisor _ 0 {()}
+larger-divisor _ _ 0 {()}
+larger-divisor n (suc d-1) (suc e-1) d≤e = begin n div e ≡⟨ sym (n*d/d≡n _ d) ⟩ _ ≤⟨ eq₂ ⟩ n div d ∎
  where
   d = suc d-1
   e = suc e-1
   eq₀ : n * d ≤ n * e
   eq₀ = a≤b→ka≤kb n d≤e
   open ≤-Reasoning
-  eq₁ : (n * d) div e ≤ n
-  eq₁ = begin _ ≤⟨ ≤-div _ _ e eq₀ ⟩ (n * e) div e ≡⟨ n*d/d≡n n e ⟩ n ∎
+  eq₁ : n div e * d ≤ n
+  eq₁ = begin _ ≤⟨ product-div n d e ⟩ _ ≤⟨ ≤-div _ _ e eq₀ ⟩ (n * e) div e ≡⟨ n*d/d≡n n e ⟩ n ∎
+  eq₂ : (n div e * d) div d ≤ n div d
+  eq₂ = ≤-div _ _ d eq₁
 
 div-≤ : ∀ n m d {d≢0 : False (d ≟ 0)} e {e≢0 : False (e ≟ 0)} → n ≤ m → d ≤ e  → _div_ n e {e≢0} ≤ _div_ m d {d≢0}
-div-≤ n m d e n≤m d≤e = begin _ ≤⟨ zog n d e d≤e ⟩ _ ≤⟨ ≤-div n m d n≤m ⟩ _ ∎
+div-≤ n m d e n≤m d≤e = begin _ ≤⟨ larger-divisor n d e d≤e ⟩ _ ≤⟨ ≤-div n m d n≤m ⟩ _ ∎
  where open ≤-Reasoning

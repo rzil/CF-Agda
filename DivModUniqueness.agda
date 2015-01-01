@@ -220,6 +220,7 @@ private
         open ≡-Reasoning
 
 ------------------------------------------------------------
+-- Theorem about the quotient of a product
 -- [(a * b) % d ≤ (a % d) * b] × [(a / d) * b ≤ (a * b) / d]
 ------------------------------------------------------------
 product-divMod : ∀ a b d {d≢0 : False (d ≟ 0)} → (toℕ (_mod_ (a * b) d {d≢0}) ≤ (toℕ (_mod_ a d {d≢0}) * b)) × ((_div_ a d {d≢0}) * b ≤ _div_ (a * b) d {d≢0})
@@ -282,6 +283,9 @@ product-mod a b d {d≢0} = proj₁ (product-divMod a b d {d≢0})
 product-div : ∀ a b d {d≢0 : False (d ≟ 0)} → (_div_ a d {d≢0}) * b ≤ _div_ (a * b) d {d≢0}
 product-div a b d {d≢0} = proj₂ (product-divMod a b d {d≢0})
 
+--------------------------------------------
+-- A larger divisor gives a smaller quotient
+--------------------------------------------
 divisor-≤ : ∀ n d {d≢0 : False (d ≟ 0)} e {e≢0 : False (e ≟ 0)} → d ≤ e → _div_ n e {e≢0} ≤ _div_ n d {d≢0}
 divisor-≤ _ 0 {()}
 divisor-≤ _ _ 0 {()}
@@ -297,6 +301,9 @@ divisor-≤ n (suc d-1) (suc e-1) d≤e = begin n div e ≡⟨ sym (n*d/d≡n _ 
   eq₂ : (n div e * d) div d ≤ n div d
   eq₂ = div-k-≤ _ _ d eq₁
 
+----------------------------------------------
+-- Divide one inequality by another inequality
+----------------------------------------------
 div-≤ : ∀ n m d {d≢0 : False (d ≟ 0)} e {e≢0 : False (e ≟ 0)} → n ≤ m → d ≤ e  → _div_ n e {e≢0} ≤ _div_ m d {d≢0}
 div-≤ n m d e n≤m d≤e = begin _ ≤⟨ divisor-≤ n d e d≤e ⟩ _ ≤⟨ div-k-≤ n m d n≤m ⟩ _ ∎
  where open ≤-Reasoning

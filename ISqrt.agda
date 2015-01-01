@@ -171,38 +171,10 @@ isqrt 0 = 0
 isqrt (suc n-1) = isqrtGo n n {tt} (generateTerminationProof n)
  where n = suc n-1
 
-record ISqrt (n : ℕ) : Set where
- constructor isqrt-result
- field
-  ⌊√n⌋ : ℕ
-  property : ⌊√n⌋ IsIntegerSqrtOf n
-
-{-
-isqrtPrf : (n : ℕ) → (x : ℕ) → {x≢0 : False (x ≟ 0)} {n<x*x : n < x * x} → Terminates n x → ISqrt n
-isqrtPrf 0 _ _ = isqrt-result 0 √0≡0
-isqrtPrf _ 0 {()}
-isqrtPrf (suc n-1) (suc x-1) {_} {n<x*x} (termination-proof term) with let fnx = step (suc n-1) (suc x-1) in (2 + n-1) ≤? (fnx * fnx)
-... | no ¬n<fnx^2 = isqrt-result (step (suc n-1) (suc x-1)) (¬b<a→a≤b ¬n<fnx^2 , {!!})
-... | yes n<fnx^2 = {!!} --isqrtPrf n (step n x {tt}) {fromWitnessFalse (step≢0 n x)}
-                  --(term (step n x {tt}) (step-decreasing n x {tt} {n<x*x}))
- where n = suc n-1
-       x = suc x-1
--}
-
-step-n^2-n≡n : ∀ n {n≢0 : False (n ≟ 0)} → step (n * n) n {n≢0} ≡ n
-step-n^2-n≡n 0 {()}
-step-n^2-n≡n (suc n-1) {n≢0} = begin
-   (n + ((n * n) div n)) div 2    ≡⟨ cong (λ z → (n + z) div 2) (n^2/n≡n n) ⟩
-   (n + n) div 2                  ≡⟨ cong (λ z → z div 2) (n+n≡n*2 n) ⟩
-   (n * 2) div 2                  ≡⟨ n*d/d≡n n 2 ⟩
-   n                              ∎
- where n = suc n-1
-       open ≡-Reasoning
-
-maxFixPoint : ∀ n x y {y≢0 : False (y ≟ 0)} → (x * x) ≤ n → step n y {y≢0} ≡ y → x ≤ y
-maxFixPoint _ _ 0 {()}
-maxFixPoint _ 0 _ _ _ = z≤n
-maxFixPoint n (suc x-1) (suc y-1) x*x≤n fny≡y with (suc x-1) ≤? (suc y-1)
+fixPointBounded : ∀ n x y {y≢0 : False (y ≟ 0)} → (x * x) ≤ n → step n y {y≢0} ≡ y → x ≤ y
+fixPointBounded _ _ 0 {()}
+fixPointBounded _ 0 _ _ _ = z≤n
+fixPointBounded n (suc x-1) (suc y-1) x*x≤n fny≡y with (suc x-1) ≤? (suc y-1)
 ... | yes x≤y = x≤y
 ... | no ¬x≤y = contradiction 1+y≤y (¬1+n≤n {y})
  where
@@ -232,9 +204,9 @@ maxFixPoint n (suc x-1) (suc y-1) x*x≤n fny≡y with (suc x-1) ≤? (suc y-1)
   1+y≤y : suc y ≤ y
   1+y≤y = begin _ ≡⟨ sym (n*d/d≡n (suc y) 2) ⟩ _ ≤⟨ div-k-≤ _ _ 2 [1+y]*2≤y+n/y ⟩ _ ≡⟨ fny≡y ⟩ _ ∎
 
-stepFixPoint : ∀ n x {x≢0 : False (x ≟ 0)} → step n x {x≢0} ≡ x → x IsIntegerSqrtOf n
-stepFixPoint _ 0 {()}
-stepFixPoint n (suc x-1) fnx≡x = lem₂ , ¬b<a→a≤b (λ z → ¬[1+n]≤n (maxFixPoint n (suc x) x (≤-pred z) fnx≡x))
+stepFixPoint⇒isqrt : ∀ n x {x≢0 : False (x ≟ 0)} → step n x {x≢0} ≡ x → x IsIntegerSqrtOf n
+stepFixPoint⇒isqrt _ 0 {()}
+stepFixPoint⇒isqrt n (suc x-1) fnx≡x = lem₂ , ¬b<a→a≤b (λ z → ¬[1+n]≤n (fixPointBounded n (suc x) x (≤-pred z) fnx≡x))
  where
   x = suc x-1
   open ≤-Reasoning
@@ -256,12 +228,34 @@ stepFixPoint n (suc x-1) fnx≡x = lem₂ , ¬b<a→a≤b (λ z → ¬[1+n]≤n 
   lem₂ = cancel-+-left-≤ (x * x) lem₁
 
 {-
-stepTwoCycle : ∀ n x {x≢0 : False (x ≟ 0)} → step n x {x≢0} ≡ suc x → x IsIntegerSqrtOf n
-stepTwoCycle n x stepnx≡1+x = {!!}
+stepTwoCycle : ∀ n x {x≢0 : False (x ≟ 0)} → step n x {x≢0} ≡ suc x → suc n ≡ (suc x) * (suc x)
+stepTwoCycle _ 0 {()}
+stepTwoCycle n (suc x-1) fnx≡1+x = {!!}
 
+stepTwoCycle⇒isqrt : ∀ n x {x≢0 : False (x ≟ 0)} → step n x {x≢0} ≡ suc x → x IsIntegerSqrtOf n
+stepTwoCycle⇒isqrt _ 0 {()}
+stepTwoCycle⇒isqrt n (suc x-1) fnx≡1+x = x*x≤n , n<[1+x]^2 
+ where
+  x = suc x-1
+  open ≤-Reasoning
+  ¬n<x*x : ¬ n < x * x
+  ¬n<x*x n<x*x = ¬1+n≤n (≤-pred (≤-step (begin _ ≡⟨ sym (cong suc fnx≡1+x) ⟩ _ ≤⟨ ≤′⇒≤ (step-decreasing n x {tt} {n<x*x}) ⟩ _ ∎)))
+  x*x≤n : x * x ≤ n
+  x*x≤n = ¬b<a→a≤b ¬n<x*x
+  n<[1+x]^2 : n < (suc x) * (suc x)
+  n<[1+x]^2 = begin _ ≡⟨ stepTwoCycle n x fnx≡1+x ⟩ _ ∎
+-}
+
+{-
 isqrtProof : (n : ℕ) → ISqrt n
 isqrtProof n = record {
   ⌊√n⌋ = isqrt n;
   property = {!!}
  }
+
+record ISqrt (n : ℕ) : Set where
+ constructor isqrt-result
+ field
+  ⌊√n⌋ : ℕ
+  property : ⌊√n⌋ IsIntegerSqrtOf n
 -}

@@ -38,11 +38,11 @@ zero-difference {zero} eq = trans (sym eq) 0-a≡a
 zero-difference {suc _} {zero} eq = eq
 zero-difference {suc a} {suc b} eq = cong suc (zero-difference {a} {b} eq)
 
-difference-bounded : ∀ {n} (a b : Fin n) → difference (toℕ a) (toℕ b) < n
-difference-bounded fzero fzero = s≤s z≤n
-difference-bounded fzero (fsuc b) = s≤s (bounded b)
-difference-bounded (fsuc a) fzero = s≤s (bounded a)
-difference-bounded (fsuc a) (fsuc b) = ≤-step (difference-bounded a b)
+difference-fin-bounded : ∀ {n} (a b : Fin n) → difference (toℕ a) (toℕ b) < n
+difference-fin-bounded fzero fzero = s≤s z≤n
+difference-fin-bounded fzero (fsuc b) = s≤s (bounded b)
+difference-fin-bounded (fsuc a) fzero = s≤s (bounded a)
+difference-fin-bounded (fsuc a) (fsuc b) = ≤-step (difference-fin-bounded a b)
 
 difference-cancel : ∀ a b → difference (a + b) b ≡ a
 difference-cancel zero zero = refl
@@ -115,3 +115,7 @@ open ≤-Reasoning
 ≤-difference d (suc a) (suc b) d≤∣a-b∣ with ≤-difference d a b d≤∣a-b∣
 ... | (inj₁ d+a≤b) = inj₁ (begin d + suc a ≡⟨ k+[1+z]≡1+[k+z] d a ⟩ suc d + a ≤⟨ s≤s d+a≤b ⟩ suc b  ∎)
 ... | (inj₂ d+b≤a) = inj₂ (begin d + suc b ≡⟨ k+[1+z]≡1+[k+z] d b ⟩ suc d + b ≤⟨ s≤s d+b≤a ⟩ suc a  ∎)
+
+difference-bounded : ∀ {a b} → a ≤ b → difference b a ≤ b
+difference-bounded z≤n = n≤n _
+difference-bounded (s≤s a≤b) = ≤-step (difference-bounded a≤b)

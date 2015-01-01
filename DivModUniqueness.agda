@@ -17,6 +17,7 @@ open import Data.Nat.Divisibility
 open import Data.Fin hiding (_+_; _-_; _<_; _≤_) renaming (zero to fzero; suc to fsuc; pred to fpred)
 open import Data.Fin.Properties hiding (_≟_)
 open import Relation.Binary.PropositionalEquality
+open import Relation.Nullary
 open import Relation.Nullary.Negation
 open import Data.Product
 open import Data.Sum
@@ -64,7 +65,7 @@ unique-divMod dividend (suc divisor-1) dm₀ dm₁ with
   lem₀ : r-diff < divisor
   lem₀ = begin
     suc r-diff                                                                    ≡⟨ sym (cong suc eq) ⟩
-    suc (difference (toℕ (DivMod.remainder dm₀)) (toℕ (DivMod.remainder dm₁)))   ≤⟨ difference-bounded (DivMod.remainder dm₀) (DivMod.remainder dm₁) ⟩
+    suc (difference (toℕ (DivMod.remainder dm₀)) (toℕ (DivMod.remainder dm₁)))   ≤⟨ difference-fin-bounded (DivMod.remainder dm₀) (DivMod.remainder dm₁) ⟩
     divisor                                                                       ∎
    where open ≤-Reasoning
   equiv : toℕ r₀ + q₀ * divisor ≡ toℕ r₁ + q₁ * divisor
@@ -305,3 +306,84 @@ div-≤ n m d e n≤m d≤e = begin _ ≤⟨ divisor-≤ n d e d≤e ⟩ _ ≤�
 ∣-div _ 0 {()}
 ∣-div n (suc d-1) (divides q eq) = unique-div n d (result q fzero eq) (n divMod d)
  where d = suc d-1
+
+-- like divisor-≤ but with strict inequality
+divisor-< : ∀ n d {d≢0 : False (d ≟ 0)} e {e≢0 : False (e ≟ 0)} → d < e → e * e ≤ n → _div_ n e {e≢0} < _div_ n d {d≢0}
+divisor-< _ 0 {()}
+divisor-< _ _ 0 {()}
+divisor-< n (suc d-1) (suc e-1) d<e e^2≤n = a≢b→a≤b→a<b n/e≢n/d n/e≤n/d
+ where
+  d = suc d-1
+  e = suc e-1
+  e≤n/e : e ≤ n div e
+  e≤n/e = begin _ ≡⟨ sym (n*d/d≡n e e) ⟩ _ ≤⟨ div-k-≤ _ _ e e^2≤n ⟩ _ ∎
+   where open ≤-Reasoning
+  n/e≤n/d : n div e ≤ n div d
+  n/e≤n/d = divisor-≤ n d e (≤-pred (≤-step d<e))
+  n/e≢n/d : ¬ (n div e ≡ n div d)
+  n/e≢n/d n/e≡n/d with (difference (toℕ (n mod e)) (toℕ (n mod d))) | inspect (difference (toℕ (n mod e))) (toℕ (n mod d))
+  ... | 0 | [ eq ] = a≤b→¬b<a e≤d d<e
+   where
+    lem₀ : (toℕ (n mod d)) ≡ (toℕ (n mod e))
+    lem₀ = sym (zero-difference eq)
+    lem₁ : (toℕ (n mod e)) + (n div e) * e ≡ (toℕ (n mod e)) + (n div e) * d
+    lem₁ = begin
+      _ ≡⟨ sym (DivMod.property (n divMod e)) ⟩
+      _ ≡⟨ DivMod.property (n divMod d) ⟩
+      _ ≡⟨ cong₂ _+_ lem₀ (sym (cong (flip _*_ d) n/e≡n/d)) ⟩
+      _ ∎
+     where open ≡-Reasoning
+    lem₂ : (n div e) * e ≡ (n div e) * d
+    lem₂ = cancel-+-left (toℕ (n mod e)) lem₁
+    lem₃ : e ≡ d
+    lem₃ with (n div e) | inspect (λ z → z div e) n
+    ... | 0 | [ eq ] = contradiction (begin _ ≤⟨ e≤n/e ⟩ _ ≡⟨ eq ⟩ _ ∎) (λ ())
+     where open ≤-Reasoning
+    ... | suc [n/e]-1 | [ eq ] = cancel-*-left e d {[n/e]-1} lem₄
+     where
+      n/e = suc [n/e]-1
+      open ≡-Reasoning
+      lem₄ : n/e * e ≡ n/e * d
+      lem₄ = begin _ ≡⟨ cong (flip _*_ e) (sym eq) ⟩ _ ≡⟨ lem₂ ⟩ _ ≡⟨ cong (flip _*_ d) eq ⟩ _ ∎
+    e≤d : e ≤ d
+    e≤d = begin _ ≡⟨ lem₃ ⟩ _ ∎
+     where open ≤-Reasoning
+  ... | suc r-diff-1 | [ eq ] = a≤b→¬b<a e≤d d<e
+   where
+    r-diff = suc r-diff-1
+    ∣e-d∣ = difference e d
+    lem₀ : toℕ (n mod e) + (n div e) * e ≡ toℕ (n mod d) + (n div e) * d
+    lem₀ = begin
+      _ ≡⟨ sym (DivMod.property (n divMod e)) ⟩
+      n ≡⟨ DivMod.property (n divMod d) ⟩
+      _ ≡⟨ cong (_+_ (toℕ (n mod d))) (cong (flip _*_ d) (sym n/e≡n/d)) ⟩
+      _ ∎
+     where open ≡-Reasoning
+    lem₁ : r-diff ≡ ∣e-d∣ * (n div e)
+    lem₁ = begin
+      _ ≡⟨ sym eq ⟩
+      _ ≡⟨ rearrange-+-eq (toℕ (n mod e)) ((n div e) * e) (toℕ (n mod d)) ((n div e) * d) lem₀ ⟩
+      _ ≡⟨ difference-left-factor _ _ (n div e) ⟩
+      _ ≡⟨ *-comm (n div e) ∣e-d∣ ⟩
+      _ ∎
+     where open ≡-Reasoning
+    lem₂ : (n div e) ∣ r-diff
+    lem₂ = divides ∣e-d∣ lem₁
+    lem₃ : e ≤ r-diff
+    lem₃ = begin e ≤⟨ e≤n/e ⟩ n div e ≤⟨ ∣⇒≤ lem₂ ⟩ _  ∎
+     where open ≤-Reasoning
+    lem₄ : (toℕ (n mod e)) ≤ (toℕ (n mod d))
+    lem₄ = sum-sizes _ _ _ _ lem₀ (a≤b→ka≤kb (n div e) (≤-pred (≤-step d<e)))
+    lem₅ : r-diff < d
+    lem₅ = begin
+      _ ≡⟨ cong suc (sym eq) ⟩
+      _ ≡⟨ cong suc (difference-comm (toℕ (n mod e)) (toℕ (n mod d))) ⟩
+      _ <⟨ s≤s (difference-bounded lem₄) ⟩
+      _ ≤⟨ bounded (n mod d) ⟩
+      _ ∎
+     where open ≤-Reasoning
+    e<d : e < d
+    e<d = begin _ ≤⟨ s≤s lem₃ ⟩ _ <⟨ lem₅ ⟩ _ ∎
+     where open ≤-Reasoning
+    e≤d : e ≤ d
+    e≤d = ≤-pred (≤-step e<d)

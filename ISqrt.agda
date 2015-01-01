@@ -4,7 +4,6 @@ module ISqrt where
 -- http://en.wikipedia.org/wiki/Integer_square_root
 
 open import Data.Nat as Nat
---open import Data.Nat.Divisibility
 open import Data.Nat.Properties
 open import Data.Nat.Properties.Simple
 open import Data.Nat.DivMod
@@ -200,36 +199,42 @@ step-n^2-n≡n (suc n-1) {n≢0} = begin
  where n = suc n-1
        open ≡-Reasoning
 
--- y < x --> n/y >= n/x --> (y + n/y)/2 >= (y + n/x)/2 -[fny≡y]-> y >= (y + n/x)/2 -[x*x≤n]-> y >= floor (y + x)/2 --> 2*y >= x + y --> y >= x --> contradiction
-zing : ∀ n x y {y≢0 : False (y ≟ 0)} → (x * x) ≤ n → step n y {y≢0} ≡ y → x ≤ y
-zing _ _ 0 {()}
-zing _ 0 _ _ _ = z≤n
-zing n (suc x-1) (suc y-1) x*x≤n fny≡y = ¬b<a→a≤b (λ y<x → {!!})
+maxFixPoint : ∀ n x y {y≢0 : False (y ≟ 0)} → (x * x) ≤ n → step n y {y≢0} ≡ y → x ≤ y
+maxFixPoint _ _ 0 {()}
+maxFixPoint _ 0 _ _ _ = z≤n
+maxFixPoint n (suc x-1) (suc y-1) x*x≤n fny≡y with (suc x-1) ≤? (suc y-1)
+... | yes x≤y = x≤y
+... | no ¬x≤y = contradiction 1+y≤y (¬1+n≤n {y})
  where
   x = suc x-1
   y = suc y-1
+  y<x : y < x
+  y<x = ¬b≤a→a<b ¬x≤y
   open ≤-Reasoning
-  lem₀ : x ≤ n div x
-  lem₀ = begin _ ≡⟨ sym (n*d/d≡n x x) ⟩ _ ≤⟨ div-k-≤ _ _ x x*x≤n ⟩ _ ∎
-  lem₁ : (y + x) div 2 ≤ (y + (n div x)) div 2
-  lem₁ = div-k-≤ _ _ 2 (add-≤ (n≤n y) lem₀)
-  lem₂ : y < x → (y + x) div 2 ≤ y
-  lem₂ y<x = begin _ ≤⟨ lem₁ ⟩ _ ≤⟨ div-k-≤ _ _ 2 (add-≤ (n≤n y) (divisor-≤ n y x (≤-pred (≤-step y<x)))) ⟩ _ ≡⟨ fny≡y ⟩ _ ∎
-  lem₃ : y < x → y + x ≤ y + y
-  lem₃ y<x with (y + x) mod 2 | inspect (λ z → z mod 2) (y + x)
-  ... | fzero | [ eq ] = begin
-    y + x                 ≡⟨ DivMod.property ((y + x) divMod 2) ⟩
-    toℕ ((y + x) mod 2) + (y + x) div 2 * 2   ≡⟨ cong (flip _+_ _) (cong toℕ eq) ⟩
-    (y + x) div 2 * 2     ≤⟨ mul-≤ (lem₂ y<x) (n≤n 2) ⟩
-    y * 2                 ≡⟨ *-comm y 2 ⟩
-    2 * y                 ≡⟨ cong ((_+_ y) ∘ suc) (+-right-identity y-1) ⟩
-    y + y                 ∎
-  ... | fsuc fzero | [ eq ] = {!sym eq!}
-  ... | fsuc (fsuc ()) | _
+  n/x<n/y : n div x < n div y
+  n/x<n/y = divisor-< n y x y<x x*x≤n
+  x≤n/x : x ≤ n div x
+  x≤n/x = begin _ ≡⟨ sym (n*d/d≡n x x) ⟩ _ ≤⟨ div-k-≤ _ _ x x*x≤n ⟩ _ ∎
+  x<n/y : x < n div y
+  x<n/y = begin suc x ≤⟨ s≤s x≤n/x ⟩ suc (n div x) ≤⟨ n/x<n/y ⟩ n div y ∎
+  2+y≤n/y : 2 + y ≤ n div y
+  2+y≤n/y = begin 2 + y ≤⟨ s≤s y<x ⟩ suc x ≤⟨ x<n/y ⟩ n div y ∎
+  [1+y]*2≤y+n/y : (1 + y) * 2 ≤ y + (n div y)
+  [1+y]*2≤y+n/y = begin
+    (1 + y) * 2   ≡⟨ distribʳ-*-+ 2 1 y ⟩
+    _             ≡⟨ cong₂ _+_ (*-comm 1 2) (*-comm y 2) ⟩
+    2 + 2 * y     ≡⟨ cong (_+_ 2) (cong (_+_ y) (*-left-identity y)) ⟩
+    2 + (y + y)   ≡⟨ refl ⟩
+    (2 + y) + y   ≡⟨ cong (flip _+_ y) (+-comm 2 y) ⟩
+    (y + 2) + y   ≡⟨ +-assoc y 2 y ⟩
+    y + (2 + y)   ≤⟨ add-≤ (n≤n y) 2+y≤n/y ⟩
+    y + (n div y) ∎
+  1+y≤y : suc y ≤ y
+  1+y≤y = begin _ ≡⟨ sym (n*d/d≡n (suc y) 2) ⟩ _ ≤⟨ div-k-≤ _ _ 2 [1+y]*2≤y+n/y ⟩ _ ≡⟨ fny≡y ⟩ _ ∎
 
 stepFixPoint : ∀ n x {x≢0 : False (x ≟ 0)} → step n x {x≢0} ≡ x → x IsIntegerSqrtOf n
 stepFixPoint _ 0 {()}
-stepFixPoint n (suc x-1) fnx≡x = lem₂ , ¬b<a→a≤b (λ z → ¬[1+n]≤n (zing n (suc x) x (≤-pred z) fnx≡x))
+stepFixPoint n (suc x-1) fnx≡x = lem₂ , ¬b<a→a≤b (λ z → ¬[1+n]≤n (maxFixPoint n (suc x) x (≤-pred z) fnx≡x))
  where
   x = suc x-1
   open ≤-Reasoning

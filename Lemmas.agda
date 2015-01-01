@@ -8,12 +8,18 @@ License: BSD New. See file LICENSE
 -}
 
 open import Data.Nat
+open import Data.Nat.Properties
 open import Data.Nat.Properties.Simple
 open import Relation.Nullary.Negation
 open import Relation.Binary.PropositionalEquality
 open import Relation.Nullary
-open import Data.Fin hiding (_≤_; _<_; _+_) renaming (zero to fzero; suc to fsuc)
+open import Data.Empty
+open import Data.Fin hiding (_≤_; _<_; _+_; pred) renaming (zero to fzero; suc to fsuc)
 open import Function
+
+n≤n : ∀ n → n ≤ n
+n≤n zero = z≤n
+n≤n (suc n-1) = s≤s (n≤n n-1)
 
 ¬b<a→a≤b : ∀ {a b} → ¬ (b < a) → a ≤ b
 ¬b<a→a≤b {zero} {zero} x = z≤n
@@ -21,9 +27,20 @@ open import Function
 ¬b<a→a≤b {suc a} {zero} x = contradiction (s≤s z≤n) x
 ¬b<a→a≤b {suc a} {suc b} x = s≤s (¬b<a→a≤b (x ∘ s≤s))
 
+¬b≤a→a<b : ∀ {a b} → ¬ (b ≤ a) → a < b
+¬b≤a→a<b {zero} {zero} ¬b≤a = ⊥-elim (¬b≤a (n≤n _))
+¬b≤a→a<b {zero} {suc b} ¬b≤a = s≤s z≤n
+¬b≤a→a<b {suc a} {zero} ¬b≤a = ⊥-elim (¬b≤a z≤n)
+¬b≤a→a<b {suc a} {suc b} ¬b≤a = s≤s (¬b≤a→a<b (¬b≤a ∘ s≤s))
+
 a≤b→¬b<a : ∀ {a b} → a ≤ b → ¬ (b < a)
 a≤b→¬b<a z≤n ()
 a≤b→¬b<a (s≤s x) y = a≤b→¬b<a x (≤-pred y)
+
+a≢b→a≤b→a<b : ∀ {a b} → ¬ (a ≡ b) → a ≤ b → a < b
+a≢b→a≤b→a<b {zero} {zero} x _ = contradiction refl x
+a≢b→a≤b→a<b {zero} {suc _} _ _ = s≤s z≤n
+a≢b→a≤b→a<b x (s≤s a≤b) = s≤s (a≢b→a≤b→a<b (x ∘ (cong suc)) a≤b)
 
 k+[1+z]≡1+[k+z] : ∀ k z → k + (1 + z) ≡ 1 + (k + z)
 k+[1+z]≡1+[k+z] k z = begin
@@ -48,10 +65,6 @@ a+k*[1+a]≡k+[1+k]*a a k = begin
 i*[1+j]≡0⇒i≡0 : ∀ i {j} → i * suc j ≡ 0 → i ≡ 0
 i*[1+j]≡0⇒i≡0 zero eq = refl
 i*[1+j]≡0⇒i≡0 (suc i) ()
-
-n≤n : ∀ n → n ≤ n
-n≤n zero = z≤n
-n≤n (suc n-1) = s≤s (n≤n n-1)
 
 m∸n+n≡m : ∀ n m → n ≤ m → (m ∸ n) + n ≡ m
 m∸n+n≡m zero m _ = +-right-identity m
@@ -120,3 +133,32 @@ a≤b→ka≤kb {_} {_} k a≤b = mul-≤ (n≤n k) a≤b
 
 *-left-identity : ∀ n → 1 * n ≡ n
 *-left-identity = +-right-identity
+
+a+b≡c→a≤c : ∀ a b c → a + b ≡ c → a ≤ c
+a+b≡c→a≤c a b .(a + b) refl = begin _ ≤⟨ ≤-steps b (n≤n a) ⟩ _ ≡⟨ +-comm b a ⟩ _ ∎
+ where open ≤-Reasoning
+
+sum-sizes : ∀ a b c d → a + b ≡ c + d → d ≤ b → a ≤ c
+sum-sizes a b c .0 a+b≡c+d z≤n = a+b≡c→a≤c _ _ _ (trans (a+b≡c+d) (+-right-identity c))
+sum-sizes a (suc b-1) c (suc d-1) a+b≡c+d (s≤s d-1≤b-1) = sum-sizes a b-1 c d-1 (cong pred lem) d-1≤b-1
+ where
+  open ≡-Reasoning
+  lem : suc (a + b-1) ≡ suc (c + d-1)
+  lem = begin
+   _ ≡⟨ sym (k+[1+z]≡1+[k+z] a b-1) ⟩
+   _ ≡⟨ a+b≡c+d ⟩
+   _ ≡⟨ k+[1+z]≡1+[k+z] c d-1 ⟩
+   _ ∎
+
+cancel-*-left : ∀ i j {k} → suc k * i ≡ suc k * j → i ≡ j
+cancel-*-left i j {k} eq = cancel-*-right i j {k} (begin _ ≡⟨ *-comm i (suc k) ⟩ _ ≡⟨ eq ⟩ _ ≡⟨ *-comm (suc k) j ⟩ _ ∎)
+ where open ≡-Reasoning
+
+¬1+n≤n : ∀ {n} → ¬ suc n ≤ n
+¬1+n≤n (s≤s 1+n≤n) = ¬1+n≤n 1+n≤n
+
+{-
+distribˡ-*-+ : ∀ m n o → m * (n + o) ≡ m * n + m * o
+distribˡ-*-+ m n o = begin _ ≡⟨ *-comm m _ ⟩ _ ≡⟨ distribʳ-*-+ m n o ⟩ _ ≡⟨ cong₂ _+_ (*-comm n m) (*-comm o m) ⟩ _  ∎
+ where open ≡-Reasoning
+-}
